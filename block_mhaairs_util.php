@@ -14,43 +14,61 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-define('token_validity_interval', 300);
+/**
+ * This file contains utility functions for the mhaairs-moodle integration.
+ *
+ * @package     block_mhaairs
+ * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
 
+define('TOKEN_VALIDITY_INTERVAL', 300);
+
+/**
+ *
+ */
 function mh_get_time_stamp() {
     return gmdate("Y-m-d\TH:i:sP");
 }
 
-function mh_create_token($user_id, $course_id = false) {
-    $result = 'userid='.$user_id.';time='.mh_get_time_stamp();
-    if ($course_id) {
-        $result = 'courseid='.$course_id.';'.$result;
+/**
+ *
+ */
+function mh_create_token($userid, $courseid = false) {
+    $result = 'userid='.$userid.';time='. mh_get_time_stamp();
+    if ($courseid) {
+        $result = 'courseid='.$courseid.';'.$result;
     }
     return $result;
 }
 
-function mh_create_token2($customer, $user_id, $user_name, $course_id = false, $course_internal_id = false, $link_type = null, $role_name = null, $course_name = null) {
+/**
+ *
+ */
+function mh_create_token2($customer, $userid, $username, $courseid = false,
+            $courseinternalid = false, $linktype = null, $rolename = null, $coursename = null) {
     $parameters = array('customer' => $customer,
-                        'userid'   => $user_id,
-                        'username' => $user_name,
+                        'userid'   => $userid,
+                        'username' => $username,
                         'time'     => mh_get_time_stamp());
 
-    if (!empty($course_id)) {
-        $parameters['courseid'] = $course_id;
+    if (!empty($courseid)) {
+        $parameters['courseid'] = $courseid;
     }
-    if (!empty($course_internal_id)) {
-        $parameters['courseinternalid'] = $course_internal_id;
+    if (!empty($courseinternalid)) {
+        $parameters['courseinternalid'] = $courseinternalid;
     }
-    if (!empty($link_type)) {
-        $parameters['linktype'] = $link_type;
+    if (!empty($linktype)) {
+        $parameters['linktype'] = $linktype;
     }
 
-	if (!empty($role_name)) {
-		$parameters['role'] = $role_name;
-	}
+    if (!empty($rolename)) {
+        $parameters['role'] = $rolename;
+    }
 
-	if (!empty($course_name)) {
-		$parameters['coursename'] = $course_name;
-	}
+    if (!empty($coursename)) {
+        $parameters['coursename'] = $coursename;
+    }
 
     $result = '';
     foreach ($parameters as $name => $value) {
@@ -63,16 +81,24 @@ function mh_create_token2($customer, $user_id, $user_name, $course_id = false, $
     return $result;
 }
 
+/**
+ *
+ */
 function mh_encode_token($token, $secret, $alg = 'md5') {
     return mh_hex_encode(''.md5($token.$secret).';'.$token);
 }
 
+/**
+ *
+ */
 function mh_encode_token2($token, $secret, $alg = 'md5') {
     return mh_hex_encode(''.md5($token.$secret).';'.$token);
 }
 
-function mh_get_token($token)
-{
+/**
+ *
+ */
+function mh_get_token($token) {
     try {
         $pos = strpos($token, ';');
         return substr($token, $pos + 1, strlen($token) - $pos);
@@ -81,8 +107,10 @@ function mh_get_token($token)
     }
 }
 
-function mh_get_hash($token)
-{
+/**
+ *
+ */
+function mh_get_hash($token) {
     try {
         $pos = strpos($token, ';');
         return substr($token, 0, $pos);
@@ -91,6 +119,9 @@ function mh_get_hash($token)
     }
 }
 
+/**
+ *
+ */
 function mh_get_token_value($token, $name) {
     try {
         $parts = explode(';', $token);
@@ -108,21 +139,24 @@ function mh_get_token_value($token, $name) {
     return false;
 }
 
-function mh_is_token_valid($token_text, $secret, $delay = 25200, $alg = 'md5', &$trace = '') {
+/**
+ *
+ */
+function mh_is_token_valid($tokentext, $secret, $delay = 25200, $alg = 'md5', &$trace = '') {
     $trace = $trace.";token validation";
     try {
-        $decoded_token = mh_hex_decode($token_text);
-        $trace = $trace.";decoded_token=".$decoded_token;
-        $token = mh_get_token($decoded_token);
-        $hash = mh_get_hash($decoded_token);
+        $decodedtoken = mh_hex_decode($tokentext);
+        $trace = $trace.";decoded_token=".$decodedtoken;
+        $token = mh_get_token($decodedtoken);
+        $hash = mh_get_hash($decodedtoken);
         $trace = $trace.";hash=".$hash;
-        $true_hash = md5($token.$secret);
-        if ($true_hash === $hash) {
+        $truehash = md5($token.$secret);
+        if ($truehash === $hash) {
             $trace = $trace."the hash is good;";
-            $token_time_text = mh_get_token_value($decoded_token, "time");
-            $token_time = strtotime($token_time_text);
-            $current_time = time();
-            $interval = ((int)$current_time) - ((int)$token_time);
+            $tokentimetext = mh_get_token_value($decodedtoken, "time");
+            $tokentime = strtotime($tokentimetext);
+            $currenttime = time();
+            $interval = ((int)$currenttime) - ((int)$tokentime);
             $trace = $trace.";interval=".$interval;
             return $interval < $delay && $interval >= -$delay;
         } else {
@@ -148,6 +182,9 @@ function mh_hex_encode($data) {
     return $result;
 }
 
+/**
+ *
+ */
 function mh_hex_decode($data) {
     try {
         return mh_hex2bin($data);
@@ -156,59 +193,69 @@ function mh_hex_decode($data) {
     }
 }
 
-if(function_exists('json_encode'))
-{
-    function mh_var2json( $var )
-    {
+/**
+ *
+ */
+function mh_var2json( $var) {
+    if (function_exists('json_encode')) {
         return json_encode($var);
-    }
-}
-else{
-    function mh_var2json( $var ){
-        //handling primitive types
-        if( is_int($var) || is_float($var) ) {
+    } else {
+        // Handling primitive types.
+        if ( is_int($var) || is_float($var)) {
             return $var;
         }
-        if( is_bool($var) ) return ($var)? "true" : "false" ; //
-        if( is_null($var) ) return "null" ; //
-        if( is_string($var) ) return '"'.addcslashes($var, '"').'"' ; //
+        if ( is_bool($var)) {
+            return ($var) ? "true" : "false";
+        }
+        if ( is_null($var)) {
+            return "null";
+        }
+        if ( is_string($var)) {
+            return '"'.addcslashes($var, '"').'"';
+        }
 
-        if(is_object($var))
-        {
+        if (is_object($var)) {
             $construct = array();
-            foreach( $var as $key => $value ){
-                $prop_name = addslashes($key);
-                $prop_value = mh_var2json( $value );
-                // Add to staging array:
-                $construct[] = "\"$prop_name\":$prop_value";
+            foreach ($var as $key => $value) {
+                $propname = addslashes($key);
+                $propvalue = mh_var2json( $value );
+                // Add to staging array.
+                $construct[] = "\"$propname\":$propvalue";
             }
-            $result = "{" . implode( ",", $construct ) . "}"; //format JSON 'object'
+            // Format JSON 'object'.
+            $result = "{" . implode( ",", $construct ) . "}";
             return $result;
         }
         $associative = count( array_diff( array_keys($var), array_keys( array_keys( $var )) ));
-        if( $associative ){
+        if ( $associative) {
+            // If the array is a vector (not associative) format JSON 'object'.
             $construct = array();
-            foreach( $var as $key => $value ){
-                $key_name = '';
-                if( is_int($key) ){
-                    $key_name = "key_$key";
-                }else{$key_name = addslashes("$key");
+            foreach ($var as $key => $value) {
+                $keyname = '';
+                if ( is_int($key)) {
+                    $keyname = "key_$key";
+                } else {
+                    $keyname = addslashes("$key");
                 }
-                $key_value = mh_var2json( $value );
-                $construct[] = '"'.$key_name.'":'.$key_value;
+                $keyvalue = mh_var2json( $value );
+                $construct[] = '"'.$keyname.'":'.$keyvalue;
             }
-            $result = "{" . implode( ",", $construct ) . "}"; //format JSON 'object'
-        } else { // If the array is a vector (not associative):
+            $result = "{" . implode( ",", $construct ) . "}";
+        } else {
+            // If the array is a vector (not associative) format JSON 'array'.
             $construct = array();
-            foreach( $var as $value ){
+            foreach ($var as $value) {
                 $construct[] = mh_var2json( $value );
             }
-            $result = "[" . implode( ",", $construct ) . "]"; //format JSON 'array'
+            $result = "[" . implode( ",", $construct ) . "]";
         }
         return $result;
     }
 }
 
+/**
+ *
+ */
 function mh_hex2bin($str) {
     $bin = "";
     $i = 0;
@@ -219,106 +266,114 @@ function mh_hex2bin($str) {
     return $bin;
 }
 
+/**
+ *
+ */
 function handle_illegal_chars($str) {
-	if (strpos($str, "-") !== false) {
-		$str = '`'.$str.'`';
-	}
-	$str = str_replace(";", "\;", str_replace("'", "''", $str));
-	return $str;
+    if (strpos($str, "-") !== false) {
+        $str = '`'.$str.'`';
+    }
+    $str = str_replace(";", "\;", str_replace("'", "''", $str));
+    return $str;
 }
 
-class MHUserInfo
-{
+/**
+ *
+ */
+class MHUserInfo {
     const SUCCESS = 0;
     const FAILURE = 1;
 
-    public $Status;
-    public $User;
-    public $Courses;
-    public $Message;
+    public $status;
+    public $user;
+    public $courses;
+    public $message;
 
-    function __construct($Status)
-    {
-        $this->Status = $Status;
-        $this->Courses = array();
+    public function __construct($status) {
+        $this->status = $status;
+        $this->courses = array();
     }
-    function add_courses($courses, $rolename)
-    {
-        foreach($courses as $course)
-        {
+
+    public function add_courses($courses, $rolename) {
+        foreach ($courses as $course) {
             $lcourse = clone $course;
             $lcourse->rolename = $rolename;
-            array_push($this->Courses, $lcourse);
+            array_push($this->courses, $lcourse);
         }
     }
-    function add_course($course, $rolename)
-    {
+
+    public function add_course($course, $rolename) {
         $lcourse = clone $course;
         $lcourse->rolename = $rolename;
-        array_push($this->Courses, $lcourse);
+        array_push($this->courses, $lcourse);
     }
-    function set_user($user)
-    {
-        $this->User = $user;
-        if($this->User){
-            $this->User->password = null;
+
+    public function set_user($user) {
+        $this->user = $user;
+        if ($this->user) {
+            $this->user->password = null;
         }
     }
 }
 
-class MHAuthenticationResult
-{
+/**
+ *
+ */
+class MHAuthenticationResult {
     const SUCCESS = 0;
     const FAILURE = 1;
 
-    public $Status;
-    public $EffectiveUserId;
-    public $RedirectURL;
-    public $Attributes;
-	public $Message;
-    function __construct($Status, $EffectiveUserId, $ErrorDetails)
-    {
-        $this->Status = $Status;
-        $this->EffectiveUserId = $EffectiveUserId;
-        $this->Attributes = array();
-		$this->Message = $ErrorDetails;
+    public $status;
+    public $effectiveuserid;
+    public $redirecturl;
+    public $attributes;
+    public $message;
+
+    public function __construct($status, $effectiveuserid, $errordetails) {
+        $this->status = $status;
+        $this->effectiveuserid = $effectiveuserid;
+        $this->attributes = array();
+        $this->message = $errordetails;
     }
 }
 
-function mh_validate_login($token, $secret, $username, $password)
-{
+/**
+ *
+ */
+function mh_validate_login($token, $secret, $username, $password) {
     $trace = '';
     $result = new MHAuthenticationResult(MHAuthenticationResult::FAILURE, '', '');
-    if(mh_is_token_valid($token, $secret, token_validity_interval, 'md5', $trace) || empty($secret)){
+    if (mh_is_token_valid($token, $secret, TOKEN_VALIDITY_INTERVAL, 'md5', $trace) || empty($secret)) {
         $user = authenticate_user_login($username, $password);
-        if($user != false){
+        if ($user != false) {
             $result = new MHAuthenticationResult(MHAuthenticationResult::SUCCESS, $user->username, '');
-        }
-        else{
+        } else {
             $result = new MHAuthenticationResult(MHAuthenticationResult::FAILURE, '', $trace.'User Authentication Failed');
         }
     }
     return $result;
 }
 
-function mh_get_user_info($token, $secret)
-{
+/**
+ *
+ */
+function mh_get_user_info($token, $secret) {
     global $DB;
+
     $trace = '';
     $userinfo = new MHUserInfo(MHUserInfo::FAILURE);
-    $userinfo->Message = 'error:token is invalid';
-    $userid = NULL;
-    if(mh_is_token_valid($token, $secret, token_validity_interval, 'md5', $trace) || empty($secret))
-    {
-        try{
+    $userinfo->message = 'error:token is invalid';
+    $userid = null;
+
+    if (mh_is_token_valid($token, $secret, TOKEN_VALIDITY_INTERVAL, 'md5', $trace) || empty($secret)) {
+        try {
             $userinfo = new MHUserInfo(MHUserInfo::SUCCESS);
             $username = mh_get_token_value(mh_hex_decode($token), "userid");
-            $user = NULL;
-            if(!empty($username))
-            {
-                $studentRoles = $DB->get_records('role', array('archetype'=>'student'));
-                $editingTeacherRoles = $DB->get_records('role', array('archetype'=>'editingteacher'));
-                $teacherRoles = $DB->get_records('role', array('archetype'=>'teacher'));
+            $user = null;
+            if (!empty($username)) {
+                $studentroles = $DB->get_records('role', array('archetype' => 'student'));
+                $editingteacherroles = $DB->get_records('role', array('archetype' => 'editingteacher'));
+                $teacherroles = $DB->get_records('role', array('archetype' => 'teacher'));
                 $user = $DB->get_record("user", array("username" => $username) );
                 $userid = $user->id;
                 $userinfo->set_user($user);
@@ -327,43 +382,42 @@ function mh_get_user_info($token, $secret)
                 $courses = enrol_get_users_courses($userid, true);
                 foreach ($courses as $course) {
                     $context = get_context_instance(CONTEXT_COURSE, $course->id);
-                    foreach ($editingTeacherRoles as $role)
-                    {
+                    foreach ($editingteacherroles as $role) {
                         $roleid = $role->id;
-                        $ras = $DB->get_records('role_assignments', array('roleid'=>$roleid, 'contextid'=>$context->id, 'userid'=>$userid));
-                        if(count($ras) > 0){
+                        $conds = array('roleid' => $roleid, 'contextid' => $context->id, 'userid' => $userid);
+                        $ras = $DB->get_records('role_assignments', $conds);
+                        if (count($ras) > 0) {
                             $userinfo->add_course($course, 'instructor');
                         }
                     }
-                    foreach ($teacherRoles as $role)
-                    {
+                    foreach ($teacherroles as $role) {
                         $roleid = $role->id;
-                        $ras = $DB->get_records('role_assignments', array('roleid'=>$roleid, 'contextid'=>$context->id, 'userid'=>$userid));
-                        if(count($ras) > 0){
+                        $conds = array('roleid' => $roleid, 'contextid' => $context->id, 'userid' => $userid);
+                        $ras = $DB->get_records('role_assignments', $conds);
+                        if (count($ras) > 0) {
                             $userinfo->add_course($course, 'instructor');
                         }
                     }
-                    foreach ($studentRoles as $role)
-                    {
+                    foreach ($studentroles as $role) {
                         $roleid = $role->id;
-                        $ras = $DB->get_records('role_assignments', array('roleid'=>$roleid, 'contextid'=>$context->id, 'userid'=>$userid));
-                        if(count($ras) > 0){
+                        $conds = array('roleid' => $roleid, 'contextid' => $context->id, 'userid' => $userid);
+                        $ras = $DB->get_records('role_assignments', $conds);
+                        if (count($ras) > 0) {
                             $userinfo->add_course($course, 'student');
                         }
                     }
                 }
                 $trace = $trace.';courses are set';
-                $userinfo->Message = '';
+                $userinfo->message = '';
             }
-        }
-        catch(Exception $e)
-        {
+        } catch (Exception $e) {
             $userinfo = new MHUserInfo(MHUserInfo::FAILURE);
-            $userinfo->Message = "ex:".$e->getMessage()." trace:".$trace;
+            $userinfo->message = "ex:".$e->getMessage()." trace:".$trace;
             $userinfo->username = $username;
             $userinfo->userid = $userid;
         }
-    }else { $userinfo->Message = "trace:".$trace;
+    } else {
+        $userinfo->message = "trace:".$trace;
     }
     return $userinfo;
 

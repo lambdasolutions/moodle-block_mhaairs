@@ -15,19 +15,31 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Block MHAAIRS Improved
+ * This file contains the mhaairs edit form class.
  *
- * @package    block
- * @subpackage mhaairs
- * @copyright  2013-2014 Moodlerooms inc.
- * @author     Teresa Hardy <thardy@moodlerooms.com>
- * @author     Darko Miletic <dmiletic@moodlerooms.com>
+ * @package     block_mhaairs
+ * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') or die();
 
+/**
+ * Block MHAAIRS Improved
+ *
+ * @package     block_mhaairs
+ * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
+ * @copyright   2013-2014 Moodlerooms inc.
+ * @author      Teresa Hardy <thardy@moodlerooms.com>
+ * @author      Darko Miletic <dmiletic@moodlerooms.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 class block_mhaairs_edit_form extends block_edit_form {
 
+    /**
+     *
+     */
     protected function specific_definition($mform) {
         global $CFG;
 
@@ -45,10 +57,10 @@ class block_mhaairs_edit_form extends block_edit_form {
         }
 
         $first = true;
-        $services_arr = array_map('trim', explode(',', $CFG->block_mhaairs_display_services));
-        natcasesort($services_arr);
+        $services = array_map('trim', explode(',', $CFG->block_mhaairs_display_services));
+        natcasesort($services);
         $prelabel = get_string('edit_prelabel', 'block_mhaairs');
-        foreach ($services_arr as $service) {
+        foreach ($services as $service) {
             $settingname = "config_$service";
             $mform->addElement('advcheckbox',
                                $settingname,

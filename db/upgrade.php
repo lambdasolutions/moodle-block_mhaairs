@@ -17,8 +17,7 @@
 /**
  * Block MHAAIRS Improved
  *
- * @package    block
- * @subpackage mhaairs
+ * @package    block_mhaairs
  * @copyright  2013 Moodlerooms inc.
  * @author     Teresa Hardy <thardy@moodlerooms.com>
  */
@@ -37,7 +36,7 @@ function xmldb_block_mhaairs_upgrade($oldversion = 0) {
         $sql = 'SELECT distinct parentcontextid FROM {block_instances} WHERE blockname = :blockname';
         $instances = $DB->get_records_sql($sql, array('blockname' => $blockname));
         if (!empty($instances)) {
-            $delete_arr = array();
+            $deletearr = array();
             foreach ($instances as $instance) {
                 $params = array('parentcontextid' => $instance->parentcontextid, 'blockname' => $blockname);
                 $recs = $DB->get_records($tbl, $params, '', 'id');
@@ -53,13 +52,13 @@ function xmldb_block_mhaairs_upgrade($oldversion = 0) {
                         $inst++;
                     } else {
                         // Delete list.
-                        $delete_arr[] = $id;
+                        $deletearr[] = $id;
                     }
                 }
                 try {
                     try {
                         $transaction = $DB->start_delegated_transaction();
-                        $DB->delete_records_list($tbl, 'id', $delete_arr);
+                        $DB->delete_records_list($tbl, 'id', $deletearr);
                         $transaction->allow_commit();
                     } catch (Exception $e) {
                         if (!empty($transaction) && !$transaction->is_disposed()) {

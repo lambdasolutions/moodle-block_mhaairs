@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify
@@ -14,9 +14,7 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-
 require_once('../../config.php');
-global $CFG, $USER;
 require_once($CFG->dirroot.'/blocks/mhaairs/block_mhaairs_util.php');
 
 /*
@@ -35,12 +33,11 @@ if (!is_numeric($courseid)) {
     print_error('invalidaccessparameter');
 }
 require_login($courseid);
-global $COURSE;
 
 $url        = required_param('url', PARAM_ALPHANUM);
-$service_id = required_param('id' , PARAM_ALPHANUM);
+$serviceid = required_param('id' , PARAM_ALPHANUM);
 $url        = mh_hex_decode($url);
-$service_id = mh_hex_decode($service_id);
+$serviceid = mh_hex_decode($serviceid);
 $course     = $COURSE;
 
 $courseid = empty($course->idnumber) ? $course->id : $course->idnumber;
@@ -63,10 +60,10 @@ $token = mh_create_token2($CFG->block_mhaairs_customer_number,
                             urlencode($USER->firstname.' '.$USER->lastname),
                             $courseid,
                             $course->id,
-                            $service_id,
+                            $serviceid,
                             $rolename,
                             urlencode($course->shortname));
-$encoded_token = mh_encode_token2($token, $CFG->block_mhaairs_shared_secret);
+$encodedtoken = mh_encode_token2($token, $CFG->block_mhaairs_shared_secret);
 
-$url = new moodle_url($url, array('token' => $encoded_token));
+$url = new moodle_url($url, array('token' => $encodedtoken));
 redirect($url);

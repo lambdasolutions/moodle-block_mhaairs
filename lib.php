@@ -26,14 +26,15 @@
 defined('MOODLE_INTERNAL') || die();
 
 /**
+ * Returns available service or help links data from Tegrity.
  *
  * @param string $linktype
  * @param bool $forcefetch
  * @return bool|array|string
  */
 function block_mhaairs_getlinks($linktype, $forcefetch=false) {
-    $customer_number = get_config('core', 'block_mhaairs_customer_number');
-    if ($customer_number === false) { // Do we have number?
+    $customernumber = get_config('core', 'block_mhaairs_customer_number');
+    if ($customernumber === false) { // Do we have number?
         return false;
     }
 
@@ -65,7 +66,7 @@ function block_mhaairs_getlinks($linktype, $forcefetch=false) {
     }
 
     $baseurl = 'http://mhaairs.tegrity.com/v1/Config/';
-    $url = $baseurl.$customer_number.'/'.$endpoint;
+    $url = $baseurl.$customernumber.'/'.$endpoint;
 
     $aconfig = array(
             'requestScheme'   => Zend_Oauth::REQUEST_SCHEME_QUERYSTRING,
@@ -75,7 +76,7 @@ function block_mhaairs_getlinks($linktype, $forcefetch=false) {
             'consumerSecret'  => '3DC9C384'
     );
 
-    $result_data = false;
+    $resultdata = false;
     try {
         $tacc = new Zend_Oauth_Token_Access();
         $client = $tacc->getHttpClient($aconfig, $url);
@@ -83,21 +84,21 @@ function block_mhaairs_getlinks($linktype, $forcefetch=false) {
         $client->setEncType(Zend_Oauth_Client::ENC_URLENCODED);
 
         $response    = $client->request();
-        $result_data = $response->getBody();
+        $resultdata = $response->getBody();
 
         // Get content type.
-        $result_type = $response->getHeader(Zend_Oauth_Client::CONTENT_TYPE);
+        $resulttype = $response->getHeader(Zend_Oauth_Client::CONTENT_TYPE);
 
         // Is this Json encoded data?
-        if (stripos($result_type, 'application/json') !== false) {
-            $result_data = Zend_Json::decode($result_data);
+        if (stripos($resulttype, 'application/json') !== false) {
+            $resultdata = Zend_Json::decode($resultdata);
         }
 
         // By default set the status to the HTTP response status.
         $status      = $response->getStatus();
         $description = $response->getMessage();
         if ($status != 200) {
-            $result_data = false;
+            $resultdata = false;
         }
     } catch (Exception $e) {
         $status      = (string)$e->getCode();
@@ -107,9 +108,9 @@ function block_mhaairs_getlinks($linktype, $forcefetch=false) {
     $logmsg = $status . ": " . $description;
     add_to_log(SITEID, 'mhaairs', 'block mhaairs_getlinks', '', $logmsg);
 
-    $tostore = serialize($result_data);
+    $tostore = serialize($resultdata);
     set_config($cachename, $tostore);
 
-    return $result_data;
+    return $resultdata;
 }
 
