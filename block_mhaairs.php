@@ -39,8 +39,11 @@ require_once($CFG->dirroot.'/blocks/mhaairs/block_mhaairs_util.php');
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class block_mhaairs extends block_base {
-    const LINK_SERVICES = 'services';
-    const LINK_HELP     = 'help';
+    protected $customernumber;
+    protected $sharedsecret;
+    protected $displayservices;
+    private $servicedata;
+
     /**
      * Initializes block title as the plugin name.
      *
@@ -49,6 +52,32 @@ class block_mhaairs extends block_base {
     public function init() {
         $this->title = get_string('pluginname', __CLASS__);
     }
+
+
+    /**
+     * Initializes block title as the plugin name.
+     *
+     * @return void
+     */
+    public function specialization() {
+        global $CFG;
+
+        // Customer number.
+        if (!empty($CFG->block_mhaairs_customer_number)) {
+            $this->customernumber = $CFG->block_mhaairs_customer_number;
+        }
+
+        // Shared secret.
+        if (!empty($CFG->block_mhaairs_shared_secret)) {
+            $this->sharedsecret = $CFG->block_mhaairs_shared_secret;
+        }
+
+        // Display services.
+        if (!empty($CFG->block_mhaairs_display_services)) {
+            $this->displayservices = $CFG->block_mhaairs_display_services;
+        }
+    }
+
     /**
      * Returns true to indicate that this block has a settings.php
      * file.
@@ -58,19 +87,22 @@ class block_mhaairs extends block_base {
     public function has_config() {
         return true;
     }
+
     /**
      * Returns the block display content.
      *
      * @return stdClass The block content object.
      */
     public function get_content() {
-        global $CFG, $COURSE;
+
         if ($this->content !== null) {
             return $this->content;
         }
+
         $this->content = new stdClass();
         $this->content->text = '';
         $this->content->footer = '';
+
         // Must be logged in to see the block.
         if (!isloggedin()) {
             return $this->content;
@@ -79,34 +111,34 @@ class block_mhaairs extends block_base {
         $courselevel = ($this->page->context->contextlevel == CONTEXT_COURSE);
         $courseinstance = ($this->page->context->instanceid == $this->page->course->id);
         if (!$courselevel or !$courseinstance) {
+            $this->content->text = 'not in course';
             return $this->content;
         }
-        $context = $this->page->context;
-        // Prepare configuration warning.
-        $configwarning = html_writer::tag(
-            'div',
-             get_string('blocknotconfig', __CLASS__),
-             array('class' => 'block_mhaairs_warning')
-         );
+
         // Weather current user can see the block with incomplete config.
-        $canmanipulateblock = has_capability('block/mhaairs:addinstance', $context);
-        // Must have customer number and secret configured.
-        if (empty($CFG->block_mhaairs_customer_number) || empty($CFG->block_mhaairs_shared_secret)) {
+        $canmanipulateblock = has_capability('block/mhaairs:addinstance', $this->page->context);
+
+        // Must have site configured.
+        if (!$this->customernumber or !$this->sharedsecret or !$this->displayservices) {
             if ($canmanipulateblock) {
-                $this->content->text = $configwarning;
+                // Set config warning in main content.
+                $this->content->text = $this->get_warning_message('sitenotconfig');
             }
             return $this->content;
         }
+
         // MAIN CONTENT
-        // Add content or config warning to main content.
-        if ($maincontent = $this->get_content_text()) {
-            $this->content->text = $maincontent;
+        // Must have services enabled in the block level.
+        if ($servicelinks = $this->get_service_links()) {
+            $this->content->text = $servicelinks;
         } else {
             if ($canmanipulateblock) {
-                $this->content->text = $configwarning;
+                // Set config warning in main content.
+                $this->content->text = $this->get_warning_message('blocknotconfig');
             }
             return $this->content;
         }
+
         // FOOTER
         // Add help links to footer if applicable.
         if ($helplinks = $this->get_help_links()) {
@@ -117,14 +149,64 @@ class block_mhaairs extends block_base {
         }
         return $this->content;
     }
+
+    /**
+     * Returns a 'not configured' message.
+     * This is used in the block content to alert users with
+     * block management permission that the integration is yet configured.
+     *
+     * @return string HTML fragment.
+     */
+    public function get_warning_message($msgstr) {
+        // Prepare configuration warning.
+        $warning = html_writer::tag(
+            'div',
+             get_string($msgstr, __CLASS__),
+             array('class' => 'block_mhaairs_warning')
+         );
+         return $warning;
+    }
+
+    /**
+     * Initializes block title as the plugin name.
+     *
+     * @return void
+     */
+    public function set_phpunit_test_config(array $options) {
+        // Must be in phpunit test mode.
+        if (!PHPUNIT_TEST) {
+            return;
+        }
+
+        // Site: customer number.
+        if (!empty($options['block_mhaairs_customer_number'])) {
+            $this->customernumber = $options['block_mhaairs_customer_number'];
+        }
+
+        // Site: shared secret.
+        if (!empty($options['block_mhaairs_shared_secret'])) {
+            $this->sharedsecret = $options['block_mhaairs_shared_secret'];
+        }
+
+        // Site: display services.
+        if (!empty($options['block_mhaairs_display_services'])) {
+            $this->displayservices = $options['block_mhaairs_display_services'];
+        }
+
+        // Service data.
+        if (!empty($options['service_data'])) {
+            $this->servicedata = $options['service_data'];
+        }
+    }
+
     /**
      * Returns the main part of the block display content.
      * In this version this contains service links.
      *
      * @return string HTML fragment.
      */
-    protected function get_content_text() {
-        $services = $this->get_services();
+    protected function get_service_links() {
+        $services = $this->get_service_data();
         if ($services === false) {
             return null;
         }
@@ -154,20 +236,15 @@ class block_mhaairs extends block_base {
         }
         return $blocklinks;
     }
+
     /**
      * Returns a list of help links the user is permitted to see.
      *
      * @return array Array of HTML link fragments.
      */
     protected function get_help_links() {
-        // Make sure we are in the right context.
-        $courselevel = ($this->page->context->contextlevel == CONTEXT_COURSE);
-        $courseinstance = ($this->page->context->instanceid == $this->page->course->id);
-        if (!$courselevel or !$courseinstance) {
-            return array();
-        }
         // Get the Help urls if enabled.
-        $helpurls = block_mhaairs_getlinks(self::LINK_HELP);
+        $helpurls = block_mhaairs_connect::get_help_urls();
         if ($helpurls === false) {
             return array();
         }
@@ -195,48 +272,56 @@ class block_mhaairs extends block_base {
         }
         return $helplinks;
     }
+
     /**
      * Returns list of services to display in the block content,
      * or false if no services are available.
      * For each services, returns:
-     *     ServiceID        string id
-     *  ServiceIconUrl    string url of an image
-     *  ServiceName        string name
-     *  ServiceUrl        string url
+     *  ServiceID       string id
+     *  ServiceIconUrl  string url of an image
+     *  ServiceName     string name
+     *  ServiceUrl      string url
      *
      * @return array|false Array of arrays.
      */
-    public function get_services() {
-        global $CFG;
+    protected function get_service_data() {
+
         $result = false;
-        // Some services must be configured by admin for display.
-        if (empty($CFG->block_mhaairs_display_services)) {
+
+        // Some services must be configured site level.
+        if (!$this->displayservices) {
             return $result;
         }
+
+        // Empty config means that block is not yet configured.
+        if (empty($this->config)) {
+            return $result;
+        }
+
+        // Compile the list of services to display
+        // as the intersection of site list and block list.
+        $displaylist = array();
+        foreach (explode(',', $this->displayservices) as $serviceid) {
+            if (!empty($this->config->$serviceid)) {
+                $displaylist[] = $serviceid;
+            }
+        }
+
+        // Empty display list means that block needs reconfiguration.
+        if (empty($displaylist)) {
+            return $result;
+        }
+
+        natcasesort($displaylist);
+
         // Get the data of all available services.
-        $services = block_mhaairs_getlinks(self::LINK_SERVICES);
+        $services = !empty($this->servicedata) ? $this->servicedata : block_mhaairs_connect::get_services();
         if ($services === false) {
             return $result;
         }
-        // Compile the list of services to display.
-        // If the block has been configured the instructor's selection may be
-        // cached in which case the list to display would be the intersection
-        // between the list from the site configuration and the list from
-        // the block configuration.
-        $permittedlist = explode(',', $CFG->block_mhaairs_display_services);
-        asort($permittedlist);
-        $finallist = $permittedlist;
-        if (!empty($this->config)) {
-            $localelements = array_keys(get_object_vars($this->config), true);
-            if (empty($localelements)) {
-                return $result;
-            }
-            $finallist = array_intersect($permittedlist, $localelements);
-        }
-        natcasesort($finallist);
         // Collate service data for displayed services.
         $result = array();
-        foreach ($finallist as $serviceid) {
+        foreach ($displaylist as $serviceid) {
             foreach ($services['Tools'] as $vset) {
                 if ($vset['ServiceID'] == $serviceid) {
                     $result[] = $vset;

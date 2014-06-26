@@ -17,18 +17,20 @@
 /**
  * Block MHAAIRS Improved
  *
- * @package    block
- * @subpackage mhaairs
+ * @package    block_mhaairs
  * @copyright  2013 Moodlerooms inc.
  * @author     Teresa Hardy <thardy@moodlerooms.com>
  * @author     Darko Miletic
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') or die();
 
-global $CFG;
 require_once($CFG->dirroot.'/blocks/mhaairs/lib.php');
 
+/**
+ *
+ */
 class admin_setting_configmulticheckbox_mhaairs extends admin_setting_configmulticheckbox {
 
     public function __construct($name, $heading, $description) {
@@ -40,7 +42,7 @@ class admin_setting_configmulticheckbox_mhaairs extends admin_setting_configmult
             return true;
         }
         $result = false;
-        $services = block_mhaairs_getlinks('services', true);
+        $services = block_mhaairs_connect::get_services(true);
         if (is_array($services) && isset($services['Tools'])) {
             foreach ($services['Tools'] as $item) {
                 $choices[$item['ServiceID']] = '&nbsp;&nbsp;'.$item['ServiceName'];

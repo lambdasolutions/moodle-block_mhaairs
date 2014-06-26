@@ -63,8 +63,9 @@ $string['linktypelabel'] = ' Link type: ';
 $string['adminhelplabel'] = 'Admin documentation';
 $string['instrhelplabel'] = 'Instructor documentation';
 $string['nolinktext'] = 'No link';
-$string['blocknotconfig'] = 'Block requires further configuration. Please contact your site admin. ';
-$string['coursenotconfig'] = 'Course requires further configuration. Please contact your site admin. ';
+$string['sitenotconfig'] = 'The site requires further configuration. Please contact your site admin. ';
+$string['blocknotconfig'] = 'The block requires further configuration. Please configure the block.';
+$string['coursenotconfig'] = 'The course requires further configuration. Please contact your site admin. ';
 $string['nolinkdefined'] = ' No link type defined. ';
 
 // Strings for the Utilities file.
