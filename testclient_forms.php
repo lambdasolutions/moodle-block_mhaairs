@@ -17,11 +17,11 @@
 /**
  * Webservice test client for MHAAIRS Gradebook Integration
  *
- * @package    block
- * @subpackage mhaairs
- * @copyright  2013-2014 Moodlerooms inc.
- * @author     Teresa Hardy <thardy@moodlerooms.com>
- * @author     Darko Miletic <dmiletic@moodlerooms.com>
+ * @package     block_mhaairs
+ * @copyright   2013-2014 Moodlerooms inc.
+ * @author      Teresa Hardy <thardy@moodlerooms.com>
+ * @author      Darko Miletic <dmiletic@moodlerooms.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') or die();

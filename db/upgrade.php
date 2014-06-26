@@ -20,6 +20,7 @@
  * @package    block_mhaairs
  * @copyright  2013 Moodlerooms inc.
  * @author     Teresa Hardy <thardy@moodlerooms.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();

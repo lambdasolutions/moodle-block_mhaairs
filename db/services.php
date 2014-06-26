@@ -17,10 +17,10 @@
 /**
  * Block MHAAIRS Improved
  *
- * @package    block
- * @subpackage mhaairs
- * @copyright  2013 Moodlerooms inc.
- * @author     Teresa Hardy <thardy@moodlerooms.com>
+ * @package     block_mhaairs
+ * @copyright   2013 Moodlerooms inc.
+ * @author      Teresa Hardy <thardy@moodlerooms.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 // We defined the web service functions to install.

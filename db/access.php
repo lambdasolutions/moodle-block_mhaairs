@@ -17,11 +17,11 @@
 /**
  * Block MHAAIRS Improved
  *
- * @package    block
- * @subpackage mhaairs
+ * @package    block_mhaairs
  * @copyright  2013-2014 Moodlerooms inc.
  * @author     Teresa Hardy <thardy@moodlerooms.com>
  * @author     Darko Miletic <dmiletic@moodlerooms.xom>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
@@ -38,6 +38,7 @@ $capabilities = array(
         ),
         'clonepermissionsfrom' => 'moodle/site:manageblocks'
     ),
+
     'block/mhaairs:viewadmindoc' => array(
             'captype' => 'read',
             'contextlevel' => CONTEXT_COURSE,
@@ -45,6 +46,7 @@ $capabilities = array(
                     'manager' => CAP_ALLOW
             )
     ),
+
     'block/mhaairs:viewteacherdoc' => array(
             'captype' => 'read',
             'contextlevel' => CONTEXT_COURSE,
@@ -55,6 +57,7 @@ $capabilities = array(
                     'manager' => CAP_ALLOW
             )
      ),
+
      'block/mhaairs:myaddinstance' => array(
         'captype' => 'write',
         'contextlevel' => CONTEXT_SYSTEM,

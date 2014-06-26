@@ -18,10 +18,10 @@
  * File locking classes
  * Note: This will not work on network shared file systems like NFS
  *
- * @package    block
- * @subpackage mhaairs
+ * @package    block_mhaairs
  * @copyright  2014 Moodlerooms inc.
  * @author     Darko Miletic <dmiletic@moodlerooms.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') or die();

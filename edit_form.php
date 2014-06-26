@@ -44,14 +44,18 @@ class block_mhaairs_edit_form extends block_edit_form {
         global $CFG;
 
         // Section header title according to language file.
-        $mform->addElement('header',
-                           'configheader',
-                           get_string('availableservices', 'block_mhaairs'));
+        $mform->addElement(
+            'header',
+            'configheader',
+            get_string('availableservices', 'block_mhaairs')
+        );
 
         if (empty($CFG->block_mhaairs_display_services)) {
-            $content = html_writer::tag('div',
-                                        get_string('noservicesmsg', 'block_mhaairs'),
-                                        array('class' => 'block_mhaairs_warning notifyproblem'));
+            $content = html_writer::tag(
+                'div',
+                get_string('noservicesmsg', 'block_mhaairs'),
+                array('class' => 'block_mhaairs_warning notifyproblem')
+            );
             $mform->addElement('html', $content);
             return;
         }
@@ -62,10 +66,12 @@ class block_mhaairs_edit_form extends block_edit_form {
         $prelabel = get_string('edit_prelabel', 'block_mhaairs');
         foreach ($services as $service) {
             $settingname = "config_$service";
-            $mform->addElement('advcheckbox',
-                               $settingname,
-                               $prelabel,
-                               "&nbsp;$service");
+            $mform->addElement(
+                'advcheckbox',
+                $settingname,
+                $prelabel,
+                "&nbsp;$service"
+            );
             $mform->setDefault($settingname, 1);
             if ($first) {
                 $prelabel = '&nbsp;';

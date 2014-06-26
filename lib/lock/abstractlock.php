@@ -17,10 +17,10 @@
 /**
  * Base locking classes and use code
  *
- * @package    block
- * @subpackage mhaairs
- * @copyright  2014 Moodlerooms inc.
- * @author     Darko Miletic <dmiletic@moodlerooms.com>
+ * @package     block_mhaairs
+ * @copyright   2014 Moodlerooms inc.
+ * @author      Darko Miletic <dmiletic@moodlerooms.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') or die();

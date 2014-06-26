@@ -19,10 +19,10 @@
  * Expects phpredis extension to be present and installed
  * We strongly recommend to use phpredis 2.2.4 or more recent
  *
- * @package    block
- * @subpackage mhaairs
+ * @package    block_mhaairs
  * @copyright  2014 Moodlerooms inc.
  * @author     Darko Miletic <dmiletic@moodlerooms.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @see https://github.com/nicolasff/phpredis phpredis home page
  * @see http://windows.php.net/downloads/pecl/releases/redis/ Windows build of phpredis extension
  * @see http://windows.php.net/downloads/pecl/snaps/redis/ Windows build snapshots of phpredis extension

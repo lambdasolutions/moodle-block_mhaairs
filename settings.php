@@ -15,12 +15,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Block MHAAIRS Improved
+ * This file contains the mhaairs block admin settings definition.
  *
- * @package    block
- * @subpackage mhaairs
- * @copyright  2013 Moodlerooms inc.
- * @author     Teresa Hardy <thardy@moodlerooms.com>
+ * @package     block_mhaairs
+ * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
+ * @copyright   2013 Moodlerooms inc.
+ * @author      Teresa Hardy <thardy@moodlerooms.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
@@ -28,8 +29,6 @@ defined('MOODLE_INTERNAL') || die();
 if (!$ADMIN->fulltree) {
     return;
 }
-
-global $CFG, $PAGE;
 
 require_once($CFG->dirroot.'/blocks/mhaairs/settingslib.php');
 
@@ -54,6 +53,7 @@ $settings->add(new admin_setting_configtext(
         '',
         PARAM_ALPHANUMEXT
 ));
+
 
 $adminurl = new moodle_url('/admin/settings.php');
 if ($PAGE->url->compare($adminurl, URL_MATCH_BASE)) {

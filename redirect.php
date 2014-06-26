@@ -34,15 +34,20 @@ if (!is_numeric($courseid)) {
 }
 require_login($courseid);
 
-$url        = required_param('url', PARAM_ALPHANUM);
-$serviceid = required_param('id' , PARAM_ALPHANUM);
-$url        = mh_hex_decode($url);
-$serviceid = mh_hex_decode($serviceid);
-$course     = $COURSE;
+// Url.
+$url = required_param('url', PARAM_ALPHANUM);
+$url = mh_hex_decode($url);
 
+// Service id.
+$serviceid = required_param('id' , PARAM_ALPHANUM);
+$serviceid = mh_hex_decode($serviceid);
+
+$course = $COURSE;
 $courseid = empty($course->idnumber) ? $course->id : $course->idnumber;
 $context = context_course::instance($course->id);
 $rolename = null;
+
+// Normalize the user's role name to insructor or student.
 if ($roles = get_user_roles($context, $USER->id)) {
     foreach ($roles as $role) {
         $rolename = empty($role->name) ? $role->shortname : $role->name;
@@ -55,6 +60,8 @@ if ($roles = get_user_roles($context, $USER->id)) {
         $rolename = 'student';
     }
 }
+
+// Create the user token.
 $token = mh_create_token2($CFG->block_mhaairs_customer_number,
                             $USER->username,
                             urlencode($USER->firstname.' '.$USER->lastname),
@@ -63,7 +70,10 @@ $token = mh_create_token2($CFG->block_mhaairs_customer_number,
                             $serviceid,
                             $rolename,
                             urlencode($course->shortname));
+
+// Encode the token.
 $encodedtoken = mh_encode_token2($token, $CFG->block_mhaairs_shared_secret);
 
+// Set the url and redirect.
 $url = new moodle_url($url, array('token' => $encodedtoken));
 redirect($url);

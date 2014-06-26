@@ -18,6 +18,8 @@
  * This file contains the external api class for the mhaairs-moodle integration.
  *
  * @package     block_mhaairs
+ * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') or die();
@@ -27,7 +29,7 @@ require_once($CFG->libdir . "/externallib.php");
 require_once($CFG->libdir . "/gradelib.php");
 
 /**
- * Block MHAAIRS AAIRS Integrated Web Services implementation
+ * Block MHAAIRS AAIRS Integrated Web Services implementation.
  *
  * @package     block_mhaairs
  * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
@@ -39,7 +41,8 @@ require_once($CFG->libdir . "/gradelib.php");
 class block_mhaairs_gradebookservice_external extends external_api {
 
     /**
-     * Returns message
+     * Allows external services to push grades into the course gradebook.
+     *
      * @param string $source
      * @param string $courseid
      * @param string $itemtype
@@ -57,6 +60,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
                                             $grades = null, $itemdetails = null) {
         global $USER, $DB;
 
+        // Gradebook sync must be enabled by admin in the block's site configuration.
         $syncgrades = get_config('core', 'block_mhaairs_sync_gradebook');
         if (!$syncgrades) {
             return GRADE_UPDATE_FAILED;
@@ -65,12 +69,12 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $badchars = ";'-";
 
         // Context validation.
-        // OPTIONAL but in most web service it should present.
+        // OPTIONAL but in most web service it should be present.
         $context = context_user::instance($USER->id);
         self::validate_context($context);
 
         // Capability checking.
-        // OPTIONAL but in most web service it should present.
+        // OPTIONAL but in most web service it should be present.
         require_capability('moodle/user:viewdetails', $context, null, true, 'cannotviewprofile');
 
         // Decode item details and check for problems.
@@ -80,20 +84,20 @@ class block_mhaairs_gradebookservice_external extends external_api {
 
         if ($itemdetails != "null" && $itemdetails != null) {
             // Check type of each parameter.
-            self::check_valid($itemdetails, 'categoryid'   , 'string', $badchars);
-            self::check_valid($itemdetails, 'courseid'     , 'string');
+            self::check_valid($itemdetails, 'categoryid', 'string', $badchars);
+            self::check_valid($itemdetails, 'courseid', 'string');
             self::check_valid($itemdetails, 'identity_type', 'string');
-            self::check_valid($itemdetails, 'itemname'     , 'string');
-            self::check_valid($itemdetails, 'itemtype'     , 'string', $badchars);
+            self::check_valid($itemdetails, 'itemname', 'string');
+            self::check_valid($itemdetails, 'itemtype', 'string', $badchars);
             if (!is_numeric($itemdetails['idnumber']) && ($grades == "null" || $grades == null)) {
                 throw new invalid_parameter_exception("Parameter idnumber is of incorrect type!");
             }
-            self::check_valid($itemdetails, 'gradetype'  , 'int');
-            self::check_valid($itemdetails, 'grademax'   , 'int');
+            self::check_valid($itemdetails, 'gradetype', 'int');
+            self::check_valid($itemdetails, 'grademax', 'int');
             self::check_valid($itemdetails, 'needsupdate', 'int');
 
             $idonly = in_array($itemdetails['identity_type'], array('internal', 'lti'), true);
-            $course = self::getcourse($courseid, $idonly);
+            $course = self::get_course($courseid, $idonly);
             if ($course === false) {
                 // We got invalid course id!
                 return GRADE_UPDATE_FAILED;
@@ -119,7 +123,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
 
         } else {
             $itemdetails = null;
-            $course = self::getcourse($courseid);
+            $course = self::get_course($courseid);
             if ($course === false) {
                 // No valid course specified.
                 return GRADE_UPDATE_FAILED;
@@ -178,47 +182,54 @@ class block_mhaairs_gradebookservice_external extends external_api {
     }
 
     /**
-     * Returns description of method parameters
+     * Returns description of method parameters.
+     *
      * @return external_function_parameters
      */
     public static function gradebookservice_parameters() {
-        return new external_function_parameters(
-            array('source'       => new external_value(PARAM_TEXT,
-                                                       'string $source source of the grade such as "mod/assignment"',
-                                                       VALUE_DEFAULT,
-                                                       'mod/assignment')
-                 , 'courseid'     => new external_value(PARAM_TEXT,
-                                                        'string $courseid id of course', VALUE_DEFAULT, 'NULL')
-                 , 'itemtype'     => new external_value(PARAM_TEXT,
-                                                        'string $itemtype type of grade item - mod, block',
-                                                        VALUE_DEFAULT, 'mod')
-                 , 'itemmodule'   => new external_value(PARAM_TEXT,
-                                                        'string $itemmodule more specific then $itemtype - assignment,'.
-                                                        ' forum, etc.; maybe NULL for some item types',
-                                                        VALUE_DEFAULT,
-                                                        'assignment')
-                 , 'iteminstance' => new external_value(PARAM_TEXT,
-                                                        'ID of the item module', VALUE_DEFAULT, '0')
-                 , 'itemnumber'   => new external_value(PARAM_TEXT,
-                                                        'int $itemnumber most probably 0, modules can use other '.
-                                                        'numbers when having more than one grades for each user',
-                                                        VALUE_DEFAULT,
-                                                        '0')
-                 , 'grades'       => new external_value(PARAM_TEXT,
-                                                        'mixed $grades grade (object, array) or several grades '.
-                                                        '(arrays of arrays or objects), NULL if updating '.
-                                                        'grade_item definition only',
-                                                        VALUE_DEFAULT, 'NULL')
-                 , 'itemdetails'  => new external_value(PARAM_TEXT,
-                                                        'mixed $itemdetails object or array describing the grading '.
-                                                        'item, NULL if no change',
-                                                        VALUE_DEFAULT, 'NULL')
-            )
-        );
+        $params = array();
+
+        // Source.
+        $desc = 'string $source source of the grade such as "mod/assignment"';
+        $params['source'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'mod/assignment');
+
+        // Courseid.
+        $desc = 'string $courseid id of course';
+        $params['courseid'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'NULL');
+
+        // Item type.
+        $desc = 'string $itemtype type of grade item - mod, block';
+        $params['itemtype'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'mod');
+
+        // Item module.
+        $desc = 'string $itemmodule more specific then $itemtype - assignment,'.
+                ' forum, etc.; maybe NULL for some item types';
+        $params['itemmodule'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'assignment');
+
+        // Item instance.
+        $desc = 'ID of the item module';
+        $params['iteminstance'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, '0');
+
+        // Item number.
+        $desc = 'int $itemnumber most probably 0, modules can use other '.
+                'numbers when having more than one grades for each user';
+        $params['itemnumber'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, '0');
+
+        // Grades.
+        $desc = 'mixed $grades grade (object, array) or several grades '.
+                '(arrays of arrays or objects), NULL if updating grade_item definition only';
+        $params['grades'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'NULL');
+
+        // Item details.
+        $desc = 'mixed $itemdetails object or array describing the grading item, NULL if no change';
+        $params['itemdetails'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'NULL');
+
+        return new external_function_parameters($params);
     }
 
     /**
-     * Returns description of method result value
+     * Returns description of method result value.
+     *
      * @return external_description
      */
     public static function gradebookservice_returns() {
@@ -226,28 +237,39 @@ class block_mhaairs_gradebookservice_external extends external_api {
     }
 
     /**
+     * Adds the id of the target catgory to the item details.
+     * If the category does not exists it is created.
+     * If the category exists any duplicates are deleted (using the locks).
+     *
      * @param array $itemdetails
      * @param int $courseid
      * @return void
      */
     protected function handle_grade_category(&$itemdetails, $courseid) {
         global $CFG;
+
         require_once($CFG->dirroot.'/blocks/mhaairs/lib/lock/abstractlock.php');
 
         $instance = new block_mhaairs_locinst();
 
-        // We have to be carefull about MDL-37055 and make sure grade categories and grade itens are in order.
+        // We have to be carefull about MDL-37055 and make sure grade categories and grade items are in order.
         $category = null;
-         /* @var $duplicates grade_category[] */
-        $duplicates = grade_category::fetch_all(array('fullname' => $itemdetails['categoryid'],
+
+        // Fetch all grade category items that match teh target grade category by fullname.
+        // If we have more than one then we need to delete the duplicates.
+        $categories = grade_category::fetch_all(array('fullname' => $itemdetails['categoryid'],
                                                       'courseid' => $courseid));
-        if (!empty($duplicates)) {
-            $category = array_shift($duplicates);
-            if (!empty($duplicates)) {
+        // If the category exists we use it.
+        if (!empty($categories)) {
+            // The first is our target category.
+            $category = array_shift($categories);
+
+            // We delete any duplicates.
+            if (!empty($categories)) {
                 if ($instance->lock()->locked()) {
                     // We have exclusive lock so let's do it.
                     try {
-                        foreach ($duplicates as $cat) {
+                        foreach ($categories as $cat) {
                             if ($cat->set_parent($category->id)) {
                                 $cat->delete();
                             }
@@ -259,7 +281,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
             }
         }
 
-        // If the category does not exist.
+        // If the category does not exist we create it.
         if ($category === null) {
             $gradeaggregation = get_config('core', 'grade_aggregation');
             if ($gradeaggregation === false) {
@@ -279,6 +301,8 @@ class block_mhaairs_gradebookservice_external extends external_api {
     }
 
     /**
+     * Checks the type validity of the specified param.
+     *
      * @param  array $params
      * @param  string $name
      * @param  string $type
@@ -311,28 +335,36 @@ class block_mhaairs_gradebookservice_external extends external_api {
     }
 
     /**
-     * Returns course object or false
+     * Returns course object by id or idnumber, or false if not found.
+     *
      * @param mixed $courseid
      * @param bool $idonly
      * @return false|stdClass
      */
-    private static function getcourse($courseid, $idonly = false) {
+    private static function get_course($courseid, $idonly = false) {
         global $DB;
+
+        $course = false;
         $select = '';
         $params = array();
-        $course = false;
-        if (!$idonly) {
-            $select = 'idnumber = :idnumber';
-            $params['idnumber'] = $courseid;
-        }
+
+        // If courseid is numeric we search by course id.
         $numericid = is_numeric($courseid) ? $courseid : 0;
         if ($numericid > 0) {
-            if (!empty($select)) {
-                $select = ' OR '.$select;
-            }
-            $select = 'id = :id' . $select;
-            $params['id'] = $numericid;
+            $select = 'id = ?';
+            $params[] = $numericid;
         }
+
+        // We search also by the course idnumber if required.
+        if (!$idonly and $courseid) {
+            if (!empty($select)) {
+                $select .= ' OR ';
+            }
+            $select .= 'idnumber = ?';
+            $params[] = $courseid;
+        }
+
+        // Fetch the course record.
         if (!empty($select)) {
             $course = $DB->get_record_select('course', $select, $params, '*', IGNORE_MULTIPLE);
         }
