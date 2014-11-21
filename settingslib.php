@@ -54,6 +54,23 @@ class admin_setting_configmulticheckbox_mhaairs extends admin_setting_configmult
         return $result;
     }
 
+    /**
+     * Returns the current setting if it is set
+     * or array otherwise so that it doesn't loop
+     * on install/upgrade.
+     *
+     * @return array
+     */
+    public function get_setting() {
+        $setting = parent::get_setting();
+
+        if (is_null($setting)) {
+            $setting = array();
+        }
+
+        return $setting;
+    }
+
     public function output_html($data, $query='') {
         if ($this->load_choices()) {
             return parent::output_html($data, $query);

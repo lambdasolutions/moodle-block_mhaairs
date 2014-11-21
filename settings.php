@@ -26,62 +26,64 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-if (!$ADMIN->fulltree) {
-    return;
-}
+if ($ADMIN->fulltree) {
+    require_once($CFG->dirroot.'/blocks/mhaairs/settingslib.php');
 
-require_once($CFG->dirroot.'/blocks/mhaairs/settingslib.php');
-
-$settings->add(new admin_setting_configcheckbox(
+    // Allow connection only via SSL.
+    $settings->add(new admin_setting_configcheckbox(
         'block_mhaairs_sslonly',
         new lang_string('sslonlylabel', 'block_mhaairs'),
-        '', 0
-));
+        '',
+        0
+    ));
 
-$settings->add(new admin_setting_configtext(
+    // Customer number.
+    $settings->add(new admin_setting_configtext(
         'block_mhaairs_customer_number',
         new lang_string('customernumberlabel', 'block_mhaairs'),
         '',
         '',
         PARAM_ALPHANUMEXT
-));
+    ));
 
-$settings->add(new admin_setting_configtext(
+    // Customer shared secret.
+    $settings->add(new admin_setting_configtext(
         'block_mhaairs_shared_secret',
         new lang_string('secretlabel', 'block_mhaairs'),
         '',
         '',
         PARAM_ALPHANUMEXT
-));
-
-
-$adminurl = new moodle_url('/admin/settings.php');
-if ($PAGE->url->compare($adminurl, URL_MATCH_BASE)) {
-    $settings->add(new admin_setting_configmulticheckbox_mhaairs (
-            'block_mhaairs_display_services',
-            new lang_string('services_displaylabel', 'block_mhaairs'),
-            new lang_string('services_desc', 'block_mhaairs')
     ));
-}
 
-$settings->add(new admin_setting_configcheckbox(
+    // Available services.
+    $settings->add(new admin_setting_configmulticheckbox_mhaairs(
+        'block_mhaairs_display_services',
+        new lang_string('services_displaylabel', 'block_mhaairs'),
+        new lang_string('services_desc', 'block_mhaairs')
+    ));
+
+    // Display help links.
+    $settings->add(new admin_setting_configcheckbox(
         'block_mhaairs_display_helplinks',
         new lang_string('mhaairs_displayhelp', 'block_mhaairs'),
         new lang_string('mhaairs_displayhelpdesc', 'block_mhaairs'),
         1
-));
+    ));
 
-$settings->add(new admin_setting_configcheckbox(
+    // Sync gradebook.
+    $settings->add(new admin_setting_configcheckbox(
         'block_mhaairs_sync_gradebook',
         new lang_string('mhaairs_syncgradebook', 'block_mhaairs'),
         new lang_string('mhaairs_syncgradebookdesc', 'block_mhaairs'),
         1
-));
+    ));
 
-$settings->add(new admin_setting_configselect(
+    // Lock type.
+    $settings->add(new admin_setting_configselect(
         'block_mhaairs_locktype',
         new lang_string('mhaairs_locktype', 'block_mhaairs'),
         new lang_string('mhaairs_locktypedesc', 'block_mhaairs'),
         'nonelock',
         array('nonelock' => 'No locking', 'filelock' => 'File locking', 'redislock' => 'Redis locking')
-));
+    ));
+}
