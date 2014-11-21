@@ -25,11 +25,11 @@ $secure = '';
 if (isset($_SERVER['HTTPS'])) {
     $secure   = filter_var($_SERVER['HTTPS'], FILTER_SANITIZE_STRING);
 }
-$token    = optional_param('token'   , 'test', PARAM_ALPHANUM);
-$action   = optional_param('action'  , null  , PARAM_ALPHA);
-$username = optional_param('username', null  , PARAM_USERNAME);
-$userid   = optional_param('userid'  , null  , PARAM_INT);
-$password = optional_param('password', null  , PARAM_TEXT);
+$token = optional_param('token', 'test', PARAM_ALPHANUM);
+$action = optional_param('action', null, PARAM_ALPHA);
+$username = optional_param('username', null, PARAM_USERNAME);
+$userid = optional_param('userid', null, PARAM_INT);
+$password = optional_param('password', null, PARAM_TEXT);
 
 if ((strcasecmp($secure, 'on') == 0) && !empty($CFG->block_mhaairs_sslonly)) {
     echo 'Connection must be secured with SSL';
@@ -45,13 +45,13 @@ switch ($action) {
         $result = "OK";
         break;
     case "ValidateLogin":
-        $result = mh_validate_login($token, $secret, $username, $password);
+        $result = MHUtil::validate_login($token, $secret, $username, $password);
         break;
     case "GetUserInfo":
-        $result = mh_get_user_info($token, $secret);
+        $result = MHUtil::get_user_info($token, $secret);
         break;
     case "GetServerTime":
-        $result = mh_get_time_stamp();
+        $result = MHUtil::get_time_stamp();
         break;
     default:
         break;
