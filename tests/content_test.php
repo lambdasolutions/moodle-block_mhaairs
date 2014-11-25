@@ -31,6 +31,7 @@ defined('MOODLE_INTERNAL') || die();
  *
  * @package     block_mhaairs
  * @category    phpunit
+ * @group       block_mhaairs
  * @group       block_mhaairs_content
  * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
