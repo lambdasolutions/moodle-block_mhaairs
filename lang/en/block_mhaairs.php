@@ -89,3 +89,10 @@ $string['error_no_course_completion'] = 'Completion is not enabled for this cour
 $string['error_no_system_completion'] = 'Completion is not enabled on this instance!';
 $string['error_invalid_course_param'] = 'Invalid course parameter passed!';
 $string['mhaairs:myaddinstance'] = 'Add an instance of McGraw-Hill AAIRS block to the my page.';
+
+// Strings for test client.
+$string['json'] = 'JSON';
+$string['xml'] = 'XML';
+$string['responseformat'] = 'Response format';
+$string['simple'] = 'Username/Password';
+$string['token'] = 'Token';
