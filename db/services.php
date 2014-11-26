@@ -15,9 +15,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Block MHAAIRS Improved
+ * Block MHAAIRS web services.
  *
  * @package     block_mhaairs
+ * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
  * @copyright   2013 Moodlerooms inc.
  * @author      Teresa Hardy <thardy@moodlerooms.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,21 +26,60 @@
 
 // We defined the web service functions to install.
 $functions = array(
+        // Depracated.
         'block_mhaairs_gradebookservice' => array(
-                'classname'   => 'block_mhaairs_gradebookservice_external',
-                'methodname'  => 'gradebookservice',
-                'classpath'   => 'blocks/mhaairs/externallib.php',
+                'classname' => 'block_mhaairs_gradebookservice_external',
+                'methodname' => 'gradebookservice',
+                'classpath' => 'blocks/mhaairs/externallib.php',
                 'description' => 'Runs the grade_update() function',
-                'type'        => 'read',
-                'testclientpath' => 'blocks/mhaairs/testclient_forms.php'
-        )
+                'type' => 'write',
+        ),
+
+        'block_mhaairs_update_grade' => array(
+                'classname' => 'block_mhaairs_gradebookservice_external',
+                'methodname' => 'update_grade',
+                'classpath' => 'blocks/mhaairs/externallib.php',
+                'description' => 'Creates/updates/deletes mhaairs grade item.',
+                'type' => 'write',
+        ),
+
+        'block_mhaairs_get_user_info' => array(
+                'classname' => 'block_mhaairs_utilservice_external',
+                'methodname' => 'get_user_info',
+                'classpath' => 'blocks/mhaairs/externallib.php',
+                'description' => 'Returns user info including list of courses the user in enrolled in.',
+                'type' => 'read',
+        ),
+
+        'block_mhaairs_validate_login' => array(
+                'classname' => 'block_mhaairs_utilservice_external',
+                'methodname' => 'validate_login',
+                'classpath' => 'blocks/mhaairs/externallib.php',
+                'description' => 'Authenticates user login.',
+                'type' => 'read',
+        ),
 );
 
-// We define the services to install as pre-build services. A pre-build service is not editable by administrator.
+// We define the services to install as pre-build services.
+// A pre-build service is not editable by administrator.
 $services = array(
         'MHAAIRS Gradebook Service' => array(
-                'functions'         => array ('block_mhaairs_gradebookservice'),
+                'functions' => array (
+                    'block_mhaairs_gradebookservice',
+                    'block_mhaairs_update_grade',
+                ),
+                'shortname' => 'mhaairs_gradebook',
                 'restrictedusers'   => 0,
                 'enabled'           => 0
-        )
+        ),
+
+        'MHAAIRS Util Service' => array(
+                'functions' => array (
+                    'block_mhaairs_get_user_info',
+                    'block_mhaairs_validate_login',
+                ),
+                'shortname' => 'mhaairs_util',
+                'restrictedusers'   => 0,
+                'enabled'           => 0
+        ),
 );

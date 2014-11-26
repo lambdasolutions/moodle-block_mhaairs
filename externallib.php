@@ -25,11 +25,12 @@
 defined('MOODLE_INTERNAL') or die();
 
 global $CFG;
-require_once($CFG->libdir . "/externallib.php");
-require_once($CFG->libdir . "/gradelib.php");
+require_once("$CFG->libdir/externallib.php");
+require_once("$CFG->libdir/gradelib.php");
+require_once("$CFG->dirroot/blocks/mhaairs/block_mhaairs_util.php");
 
 /**
- * Block MHAAIRS AAIRS Integrated Web Services implementation.
+ * Block mhaairs gradebook web service.
  *
  * @package     block_mhaairs
  * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
@@ -40,6 +41,7 @@ require_once($CFG->libdir . "/gradelib.php");
  */
 class block_mhaairs_gradebookservice_external extends external_api {
 
+    // UPDATE GRADE.
     /**
      * Allows external services to push grades into the course gradebook.
      *
@@ -55,7 +57,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
      * @throws invalid_parameter_exception
      * @throws moodle_exception
      */
-    public static function gradebookservice($source = 'mod/assignment', $courseid ='courseid', $itemtype = 'mod',
+    public static function update_grade($source = 'mod/assignment', $courseid ='courseid', $itemtype = 'mod',
                                             $itemmodule = 'assignment', $iteminstance = '0', $itemnumber = '0',
                                             $grades = null, $itemdetails = null) {
         global $USER, $DB;
@@ -186,7 +188,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
      *
      * @return external_function_parameters
      */
-    public static function gradebookservice_parameters() {
+    public static function update_grade_parameters() {
         $params = array();
 
         // Source.
@@ -232,10 +234,53 @@ class block_mhaairs_gradebookservice_external extends external_api {
      *
      * @return external_description
      */
-    public static function gradebookservice_returns() {
+    public static function update_grade_returns() {
         return new external_value(PARAM_TEXT, '0 for success anything else for failure');
     }
 
+    // DEPRACATED: GRADEBOOKSERVICE.
+    /**
+     * Allows external services to push grades into the course gradebook.
+     * Alias for {@link block_mhaairs_gradebookservice_external::update_grade()}.
+     *
+     * @return mixed
+     * @throws invalid_parameter_exception
+     * @throws moodle_exception
+     */
+    public static function gradebookservice($source = 'mod/assignment', $courseid ='courseid', $itemtype = 'mod',
+                                            $itemmodule = 'assignment', $iteminstance = '0', $itemnumber = '0',
+                                            $grades = null, $itemdetails = null) {
+        return self::update_grade(
+            $source,
+            $courseid,
+            $itemtype,
+            $itemmodule,
+            $iteminstance,
+            $itemnumber,
+            $grades,
+            $itemdetails
+        );
+    }
+
+    /**
+     * Returns description of method parameters.
+     *
+     * @return external_function_parameters
+     */
+    public static function gradebookservice_parameters() {
+        return self::update_grade_parameters();
+    }
+
+    /**
+     * Returns description of method result value.
+     *
+     * @return external_description
+     */
+    public static function gradebookservice_returns() {
+        return self::update_grade_returns();
+    }
+
+    // UTILITY.
     /**
      * Adds the id of the target catgory to the item details.
      * If the category does not exists it is created.
@@ -369,6 +414,201 @@ class block_mhaairs_gradebookservice_external extends external_api {
             $course = $DB->get_record_select('course', $select, $params, '*', IGNORE_MULTIPLE);
         }
         return $course;
+    }
+
+}
+
+/**
+ * Block mhaairs util web service.
+ *
+ * @package     block_mhaairs
+ * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
+ * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+class block_mhaairs_utilservice_external extends external_api {
+
+    /**
+     * Allows external applications to retrieve MHUserInfo by token.
+     *
+     * @param string $token
+     * @return MHUserInfo object
+     */
+    public static function get_user_info($token) {
+        global $CFG;
+
+        // Require secured connection.
+        if ($error = self::require_ssl()) {
+            $userinfo = new MHUserInfo(MHUserInfo::FAILURE);
+            $userinfo->message = $error;
+
+            return $userinfo;
+        }
+
+        // Get the configured secret.
+        $secret = self::get_secret();
+
+        // Get the user info.
+        $result = MHUtil::get_user_info($token, $secret);
+
+        return $result;
+    }
+
+    /**
+     * Returns description of method parameters.
+     *
+     * @return external_function_parameters
+     */
+    public static function get_user_info_parameters() {
+        $params = array();
+
+        // Token.
+        $desc = 'string $token Token';
+        $params['token'] = new external_value(PARAM_TEXT, $desc);
+
+        return new external_function_parameters($params);
+    }
+
+    /**
+     * Returns description of method result value.
+     *
+     * @return external_description
+     */
+    public static function get_user_info_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_INT, 'Result status: 0|1 (SUCCESS|FAILURE).'),
+                'user' => new external_single_structure(
+                    array(
+                    )
+                ),
+                'courses' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                        )
+                    )
+                ),
+                'message' => new external_value(PARAM_TEXT, 'Error message on failure; empty on success.'),
+            )
+        );
+    }
+
+    /**
+     * Allows external services to push grades into the course gradebook.
+     * Alias for {@link block_mhaairs_gradebookservice_external::update_grade()}.
+     *
+     * @return mixed
+     * @throws invalid_parameter_exception
+     * @throws moodle_exception
+     */
+    public static function validate_login($token, $username, $password) {
+        // Require secured connection.
+        if ($error = self::require_ssl()) {
+            $authresult = new MHAuthenticationResult(
+                MHAuthenticationResult::FAILURE,
+                '',
+                $error,
+            );
+
+            return $authresult;
+        }
+
+        // Get the configured secret.
+        $secret = self::get_secret();
+
+        // Validate login.
+        $result = MHUtil::validate_login($token, $secret, $username, $password);
+
+        return $result;
+    }
+
+    /**
+     * Returns description of method parameters.
+     *
+     * @return external_function_parameters
+     */
+    public static function validate_login_parameters() {
+        $params = array();
+
+        // Token.
+        $desc = 'string $token Token';
+        $params['token'] = new external_value(PARAM_TEXT, $desc);
+
+        // Username.
+        $desc = 'string $username Username';
+        $params['username'] = new external_value(PARAM_TEXT, $desc);
+
+        // Password.
+        $desc = 'string $password Password';
+        $params['password'] = new external_value(PARAM_TEXT, $desc);
+
+        return new external_function_parameters($params);
+    }
+
+    /**
+     * Returns description of method result value.
+     *
+     * @return external_description
+     */
+    public static function validate_login_returns() {
+        return new external_single_structure(
+            array(
+                'status' => new external_value(PARAM_INT, 'Result status: 0|1 (SUCCESS|FAILURE).'),
+                'effectiveuserid' => new external_value(PARAM_TEXT, 'The validated user username.'),
+                'redirecturl' => new external_value(PARAM_TEXT, 'Error message on failure; empty on success.'),
+                'attributes' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                        )
+                    )
+                ),
+                'message' => new external_value(PARAM_TEXT, 'Error message on failure; empty on success.'),
+            )
+        );
+    }
+
+    /**
+     * Checks if the plugin is configured to require ssl connection and verifies https connection
+     * if needed. Returns null on success, and error message on failure (http access when ssl required).
+     *
+     * @return string|null
+     */
+    private static function require_ssl() {
+        global $CFG;
+
+        $notsecured = 'error: connection must be secured with SSL';
+
+        // Required only if enabled by admin.
+        if (empty($CFG->block_mhaairs_sslonly)) {
+            return null;
+        }
+
+        // No https, not secured.
+        if (!isset($_SERVER['HTTPS'])) {
+            return $notsecured;
+        }
+
+        $secured = filter_var($_SERVER['HTTPS'], FILTER_SANITIZE_STRING);
+        if (empty($secured)) {
+            return $notsecured;
+        }
+
+        return null;
+    }
+
+    /**
+     * Returns the plugin configured shared secret.
+     *
+     * @return string
+     */
+    private static function get_secret() {
+        global $CFG;
+
+        $secret = '';
+        if (!empty($CFG->block_mhaairs_shared_secret)) {
+            $secret = $CFG->block_mhaairs_shared_secret;
+        }
+
+        return $secret;
     }
 
 }

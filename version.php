@@ -17,18 +17,19 @@
 /**
  * Block MHAAIRS version
  *
- * @package    block_mhaairs
- * @copyright  2013-2014 Moodlerooms inc.
- * @author     Teresa Hardy <thardy@moodlerooms.com>
- * @author     Darko Miletic <dmiletic@moodlerooms.com>
- * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package block_mhaairs
+ * @copyright 2014 Itamar Tzadok {@link http://substantialmethods.com}
+ * @copyright 2013-2014 Moodlerooms inc.
+ * @author Teresa Hardy <thardy@moodlerooms.com>
+ * @author Darko Miletic <dmiletic@moodlerooms.com>
+ * @license http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2013120202;
+$plugin->version = 2014112500;
+$plugin->release = 'dev';
 $plugin->requires = 2010112400;
-$plugin->cron      = 0;
+$plugin->cron = 0;
 $plugin->component = 'block_mhaairs';
-$plugin->maturity  = MATURITY_STABLE;
-$plugin->release   = '4.01 (2013120201)';
+$plugin->maturity  = MATURITY_ALPHA;

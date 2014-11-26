@@ -351,7 +351,7 @@ class MHUtil {
 
         $trace = '';
         $userinfo = new MHUserInfo(MHUserInfo::FAILURE);
-        $userinfo->message = 'error:token is invalid';
+        $userinfo->message = 'error: token is invalid';
         $userid = null;
 
         if (self::is_token_valid($token, $secret, TOKEN_VALIDITY_INTERVAL, 'md5', $trace) || empty($secret)) {
@@ -421,9 +421,13 @@ class MHUserInfo {
     const SUCCESS = 0;
     const FAILURE = 1;
 
+    /* @var int $status SUCCESS|FAILURE. */
     public $status;
+    /* @var stdClass $user The user object. */
     public $user;
+    /* @var array $courses A list of course objects. */
     public $courses;
+    /* @var string $message Unused. */
     public $message;
 
     public function __construct($status) {
