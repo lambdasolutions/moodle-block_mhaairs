@@ -283,7 +283,7 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
                 $courses[$course->idnumber] = $course;
             }
             $courseid = $courses[$case->course]->id;
-            
+
             // Add enrollments.
             foreach ($roles as $shortname => $roleid) {
                 if (!empty($case->$shortname)) {

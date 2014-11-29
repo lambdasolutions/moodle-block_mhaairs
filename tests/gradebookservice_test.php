@@ -122,7 +122,7 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
         // Some fields should be asserted separately.
         unset($expected['courseid']);
         unset($expected['categoryid']);
-        
+
         $this->assertEquals($this->course->id, $gitem->courseid);
         foreach ($gitem as $var => $value) {
             if (array_key_exists($var, $expected)) {
@@ -190,7 +190,7 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
         // There is only one course in this test,
         // So get an id that is different from the course's.
         $courseid = $this->course->id + 1;
-        
+
         // Item details.
         $itemdetails = array(
             'categoryid' => '',
