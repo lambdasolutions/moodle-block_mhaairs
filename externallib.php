@@ -390,27 +390,29 @@ class block_mhaairs_gradebookservice_external extends external_api {
         global $DB;
 
         $course = false;
-        $select = '';
+        $where = array();
         $params = array();
 
+        // We must have course id.
+        if (empty($courseid)) {
+            return false;
+        }
+
         // If courseid is numeric we search by course id.
-        $numericid = is_numeric($courseid) ? $courseid : 0;
-        if ($numericid > 0) {
-            $select = 'id = ?';
-            $params[] = $numericid;
+        if (is_numeric($courseid) and $courseid > 0) {
+            $where[] = 'id = ?';
+            $params[] = (int) $courseid;
         }
 
         // We search also by the course idnumber if required.
-        if (!$idonly and $courseid) {
-            if (!empty($select)) {
-                $select .= ' OR ';
-            }
-            $select .= 'idnumber = ?';
+        if (!$idonly) {
+            $where[] = 'idnumber = ?';
             $params[] = $courseid;
         }
 
         // Fetch the course record.
-        if (!empty($select)) {
+        if (!empty($where)) {
+            $select = implode(' OR ', $where);
             $course = $DB->get_record_select('course', $select, $params, '*', IGNORE_MULTIPLE);
         }
         return $course;
@@ -433,9 +435,7 @@ class block_mhaairs_utilservice_external extends external_api {
      * @param string $token
      * @return MHUserInfo object
      */
-    public static function get_user_info($token) {
-        global $CFG;
-
+    public static function get_user_info($token, $identitytype = null) {
         // Require secured connection.
         if ($error = self::require_ssl()) {
             $userinfo = new MHUserInfo(MHUserInfo::FAILURE);
@@ -448,7 +448,7 @@ class block_mhaairs_utilservice_external extends external_api {
         $secret = self::get_secret();
 
         // Get the user info.
-        $result = MHUtil::get_user_info($token, $secret);
+        $result = MHUtil::get_user_info($token, $secret, $identitytype);
 
         return $result;
     }
@@ -464,6 +464,11 @@ class block_mhaairs_utilservice_external extends external_api {
         // Token.
         $desc = 'string $token Token';
         $params['token'] = new external_value(PARAM_TEXT, $desc);
+
+        // Identity type.
+        $desc = 'string $identitytype Indicates the user search var; if \'internal\' the user is searched by id;'.
+                ' if anything else or empty, the user is searched by username.';
+        $params['identitytype'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, null);
 
         return new external_function_parameters($params);
     }
@@ -506,7 +511,7 @@ class block_mhaairs_utilservice_external extends external_api {
             $authresult = new MHAuthenticationResult(
                 MHAuthenticationResult::FAILURE,
                 '',
-                $error,
+                $error
             );
 
             return $authresult;
@@ -573,12 +578,11 @@ class block_mhaairs_utilservice_external extends external_api {
      * @return string|null
      */
     private static function require_ssl() {
-        global $CFG;
-
         $notsecured = 'error: connection must be secured with SSL';
+        $sslonly = get_config('core', 'block_mhaairs_sslonly');
 
         // Required only if enabled by admin.
-        if (empty($CFG->block_mhaairs_sslonly)) {
+        if (!$sslonly) {
             return null;
         }
 
@@ -601,14 +605,11 @@ class block_mhaairs_utilservice_external extends external_api {
      * @return string
      */
     private static function get_secret() {
-        global $CFG;
-
-        $secret = '';
-        if (!empty($CFG->block_mhaairs_shared_secret)) {
-            $secret = $CFG->block_mhaairs_shared_secret;
+        if ($secret = get_config('core', 'block_mhaairs_shared_secret')) {
+            return $secret;
         }
 
-        return $secret;
+        return '';
     }
 
 }

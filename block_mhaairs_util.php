@@ -344,72 +344,100 @@ class MHUtil {
      *
      * @param string $token
      * @param string $secret
+     * @param string $identitytype
      * @return MHUserInfo
      */
-    public static function get_user_info($token, $secret) {
+    public static function get_user_info($token, $secret, $identitytype = null) {
         global $DB;
 
         $trace = '';
         $userinfo = new MHUserInfo(MHUserInfo::FAILURE);
-        $userinfo->message = 'error: token is invalid';
         $userid = null;
+        $uservar = self::get_user_var($identitytype);
 
-        if (self::is_token_valid($token, $secret, TOKEN_VALIDITY_INTERVAL, 'md5', $trace) || empty($secret)) {
-            try {
-                $userinfo = new MHUserInfo(MHUserInfo::SUCCESS);
-                $username = self::get_token_value(self::hex_decode($token), "userid");
-                $user = null;
-                if (!empty($username)) {
-                    $studentroles = $DB->get_records('role', array('archetype' => 'student'));
-                    $editingteacherroles = $DB->get_records('role', array('archetype' => 'editingteacher'));
-                    $teacherroles = $DB->get_records('role', array('archetype' => 'teacher'));
-                    $user = $DB->get_record("user", array("username" => $username) );
-                    $userid = $user->id;
-                    $userinfo->set_user($user);
-                    $trace = $trace.';user is set';
-
-                    $courses = enrol_get_users_courses($userid, true);
-                    foreach ($courses as $course) {
-                        $context = get_context_instance(CONTEXT_COURSE, $course->id);
-                        foreach ($editingteacherroles as $role) {
-                            $roleid = $role->id;
-                            $conds = array('roleid' => $roleid, 'contextid' => $context->id, 'userid' => $userid);
-                            $ras = $DB->get_records('role_assignments', $conds);
-                            if (count($ras) > 0) {
-                                $userinfo->add_course($course, 'instructor');
-                            }
-                        }
-                        foreach ($teacherroles as $role) {
-                            $roleid = $role->id;
-                            $conds = array('roleid' => $roleid, 'contextid' => $context->id, 'userid' => $userid);
-                            $ras = $DB->get_records('role_assignments', $conds);
-                            if (count($ras) > 0) {
-                                $userinfo->add_course($course, 'instructor');
-                            }
-                        }
-                        foreach ($studentroles as $role) {
-                            $roleid = $role->id;
-                            $conds = array('roleid' => $roleid, 'contextid' => $context->id, 'userid' => $userid);
-                            $ras = $DB->get_records('role_assignments', $conds);
-                            if (count($ras) > 0) {
-                                $userinfo->add_course($course, 'student');
-                            }
-                        }
-                    }
-                    $trace = $trace.';courses are set';
-                    $userinfo->message = '';
-                }
-            } catch (Exception $e) {
-                $userinfo = new MHUserInfo(MHUserInfo::FAILURE);
-                $userinfo->message = "ex:".$e->getMessage()." trace:".$trace;
-                $userinfo->username = $username;
-                $userinfo->userid = $userid;
+        // With secret the token must be valid.
+        if ($secret) {
+            if (!self::is_token_valid($token, $secret, TOKEN_VALIDITY_INTERVAL, 'md5', $trace)) {
+                $userinfo->message = 'error: token is invalid';
+                return $userinfo;
             }
-        } else {
-            $userinfo->message = "trace:".$trace;
         }
-        return $userinfo;
 
+        // We must have token user id.
+        if (!$tokenuserid = self::get_token_value(self::hex_decode($token), 'userid')) {
+            $userinfo->message = 'error: token is invalid';
+            return $userinfo;
+        }
+
+        // We have token user id and we can try to fetch the user info.
+        try {
+            // Get the user.
+            if (!$user = $DB->get_record('user', array($uservar => $tokenuserid))) {
+                $userinfo->message = "error: user with $uservar '$tokenuserid' not found";
+                return $userinfo;
+            };
+
+            // We have a user so let's construct userinfo.
+            $userinfo = new MHUserInfo(MHUserInfo::SUCCESS);
+            $userinfo->set_user($user);
+            $trace = $trace.'; user is set';
+
+            // Get the user courses.
+            $userid = $user->id;
+            $courses = enrol_get_users_courses($userid, true);
+
+            // Get equivalent roles to Tegrity student role.
+            list($intype, $rparams) = $DB->get_in_or_equal(array('student'));
+            if (!$studentroles = $DB->get_records_select('role', " archetype $intype ", $rparams)) {
+                $studentroles = array();
+            }
+
+            // Get equivalent roles to Tegrity instructor role.
+            list($intype, $rparams) = $DB->get_in_or_equal(array('teacher', 'editingteacher'));
+            if (!$instructorroles = $DB->get_records_select('role', " archetype $intype ", $rparams)) {
+                $instructorroles = array();
+            }
+
+            foreach ($courses as $course) {
+                $context = context_course::instance($course->id);
+                // Has instrutor role in course?
+                foreach ($instructorroles as $roleid => $unused) {
+                    $conds = array('roleid' => $roleid, 'contextid' => $context->id, 'userid' => $userid);
+                    if ($DB->record_exists('role_assignments', $conds)) {
+                        $userinfo->add_course($course, 'instructor');
+                        break;
+                    }
+                }
+                // Has student role in course?
+                foreach ($studentroles as $roleid => $unused) {
+                    $conds = array('roleid' => $roleid, 'contextid' => $context->id, 'userid' => $userid);
+                    if ($DB->record_exists('role_assignments', $conds)) {
+                        $userinfo->add_course($course, 'student');
+                        break;
+                    }
+                }
+            }
+            $trace = $trace. '; courses are set';
+            $userinfo->message = '';
+
+        } catch (Exception $e) {
+            $userinfo = new MHUserInfo(MHUserInfo::FAILURE);
+            $userinfo->message = 'ex:'. $e->getMessage(). ' trace:'. $trace;
+        }
+
+        return $userinfo;
+    }
+
+    /**
+     * Returns the user var by means of which the user should be looked up,
+     * according to the given identity type, 'id' if identity type is internal,
+     * and 'username' otherwise.
+     *
+     * @param string $identitytype
+     * @return string
+     */
+    public static function get_user_var($identitytype = null) {
+        return ($identitytype == 'internal' ? 'id' : 'username');
     }
 
 }

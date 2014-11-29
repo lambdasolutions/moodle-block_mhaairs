@@ -30,6 +30,7 @@ $action = optional_param('action', null, PARAM_ALPHA);
 $username = optional_param('username', null, PARAM_USERNAME);
 $userid = optional_param('userid', null, PARAM_INT);
 $password = optional_param('password', null, PARAM_TEXT);
+$identitytype = optional_param('identitytype', null, PARAM_TEXT);
 
 if ((strcasecmp($secure, 'on') == 0) && !empty($CFG->block_mhaairs_sslonly)) {
     echo 'Connection must be secured with SSL';
@@ -48,7 +49,7 @@ switch ($action) {
         $result = MHUtil::validate_login($token, $secret, $username, $password);
         break;
     case "GetUserInfo":
-        $result = MHUtil::get_user_info($token, $secret);
+        $result = MHUtil::get_user_info($token, $secret, $identitytype);
         break;
     case "GetServerTime":
         $result = MHUtil::get_time_stamp();

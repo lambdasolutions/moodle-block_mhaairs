@@ -1,0 +1,7 @@
+username,secret,identitytype,tc2,tc3,tc4,tc5
+user2,secret,internal,"instructor,student",,,student
+user2,secret,,"instructor,student",,,student
+user2,,,"instructor,student",,,student
+user3,secret,internal,"instructor,student","instructor,student",,instructor
+user3,secret,,"instructor,student","instructor,student",,instructor
+user3,,,"instructor,student","instructor,student",,instructor
