@@ -22,36 +22,80 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require('../../../../config.php');
-require_once($CFG->libdir.'/adminlib.php');
+require_once('../../../config.php');
+require_once("$CFG->libdir/adminlib.php");
 require_once("$CFG->libdir/externallib.php");
-require_once("$CFG->dirroot/blocks/mhaairs/tests/client/testclient_forms.php");
+require_once("$CFG->dirroot/blocks/mhaairs/admin/testclient_forms.php");
 
-$function = optional_param('function', 'block_mhaairs_gradebookservice', PARAM_PLUGIN);
+$function = optional_param('function', '', PARAM_PLUGIN);
 $protocol = optional_param('protocol', 'rest', PARAM_ALPHA);
 $authmethod = optional_param('authmethod', '', PARAM_ALPHA);
 
-$PAGE->set_url('/blocks/mhaairs/tests/client/testclient.php');
-$PAGE->navbar->ignore_active(true);
-$PAGE->navbar->add(get_string('administrationsite'));
-$PAGE->navbar->add(get_string('pluginname', 'block_mhaairs'));
-$PAGE->navbar->add(get_string('testclient', 'webservice'),
-        new moodle_url('/blocks/mhaairs/tests/client/testclient.php'));
-if (!empty($function)) {
-    $PAGE->navbar->add($function);
+$PAGE->set_url('/blocks/mhaairs/admin/testclient.php');
+
+admin_externalpage_setup('blockmhaairs_testclient');
+
+$heading = get_string('testclient', 'webservice');
+
+// Get all functions.
+$functions = array();
+$params = array('component' => 'block_mhaairs');
+$allfunctions = $DB->get_records('external_functions', $params, 'name ASC');
+$testclienturl = '/blocks/mhaairs/admin/testclient.php';
+foreach ($allfunctions as $f) {
+    $class = $f->name.'_form';
+    if (class_exists($class)) {
+        $functions[$f->name] = $testclienturl. '?function='. $f->name;
+    }
 }
 
-admin_externalpage_setup('testclient');
+// White-listing security.
+if (!isset($functions[$function])) {
+    $function = $selected = '';
+} else {
+    $selected = $functions[$function];
+}
 
-$class = $function.'_test_form';
+$functionstr = get_string('function', 'webservice');
+$functionselect = $OUTPUT->url_select(
+    array_flip($functions),
+    $selected,
+    array('' => $functionstr. '...')
+);
 
-$mform = new $class;
+if (!$function) {
+
+    echo $OUTPUT->header();
+    echo $OUTPUT->heading($heading);
+
+    echo $functionselect;
+
+    echo $OUTPUT->footer();
+    die;
+}
+
+$PAGE->navbar->add($function);
+
+$formclass = $function.'_form';
+$formurlparams = array('function' => $function, 'protocol' => $protocol);
+$formurl = new \moodle_url('/blocks/mhaairs/admin/testclient.php', $formurlparams);
+$mform = new $formclass($formurl);
 $mform->set_data(array('function' => $function, 'protocol' => $protocol));
 
+// If form is cancelled go back to select a service.
 if ($mform->is_cancelled()) {
     redirect('testclient.php');
+}
 
-} else if ($data = $mform->get_data()) {
+// We have a service to display.
+echo $OUTPUT->header();
+echo $OUTPUT->heading($heading);
+
+echo $functionselect;
+echo html_writer::tag('h3', $function);
+
+// Process a request if any.
+if ($data = $mform->get_data()) {
     $functioninfo = external_function_info($function);
 
     // First load lib of selected protocol.
@@ -86,9 +130,6 @@ if ($mform->is_cancelled()) {
     $params = external_api::validate_parameters($functioninfo->parameters_desc, $params);
     $fullurl = new \moodle_url($serverurl, $params);
 
-    echo $OUTPUT->header();
-    echo $OUTPUT->heading(get_string('pluginname', 'webservice_'.$protocol).': '.$function);
-
     // Display the url.
     echo html_writer::tag('h3', 'URL');
     echo $OUTPUT->box_start();
@@ -108,14 +149,7 @@ if ($mform->is_cancelled()) {
     }
 
     echo $OUTPUT->box_end();
-    $mform->display();
-    echo $OUTPUT->footer();
-    die;
-
-} else {
-    echo $OUTPUT->header();
-    echo $OUTPUT->heading(get_string('pluginname', 'webservice_'.$protocol).': '.$function);
-    $mform->display();
-    echo $OUTPUT->footer();
-    die;
 }
+
+$mform->display();
+echo $OUTPUT->footer();

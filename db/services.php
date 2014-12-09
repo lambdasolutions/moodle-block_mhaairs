@@ -33,6 +33,7 @@ $functions = array(
                 'classpath' => 'blocks/mhaairs/externallib.php',
                 'description' => 'Runs the grade_update() function',
                 'type' => 'write',
+                'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
         ),
 
         'block_mhaairs_update_grade' => array(
@@ -41,6 +42,7 @@ $functions = array(
                 'classpath' => 'blocks/mhaairs/externallib.php',
                 'description' => 'Creates/updates/deletes mhaairs grade item.',
                 'type' => 'write',
+                'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
         ),
 
         'block_mhaairs_get_user_info' => array(
@@ -49,6 +51,7 @@ $functions = array(
                 'classpath' => 'blocks/mhaairs/externallib.php',
                 'description' => 'Returns user info including list of courses the user in enrolled in.',
                 'type' => 'read',
+                'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
         ),
 
         'block_mhaairs_validate_login' => array(
@@ -57,6 +60,7 @@ $functions = array(
                 'classpath' => 'blocks/mhaairs/externallib.php',
                 'description' => 'Authenticates user login.',
                 'type' => 'read',
+                'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
         ),
 );
 

@@ -33,7 +33,7 @@ require_once($CFG->libdir.'/formslib.php');
 /**
  * Base form for mhaairs webservice test client.
  */
-class block_mhaairs_service_test_form extends moodleform {
+class block_mhaairs_service_form extends moodleform {
 
     /**
      * Definition.
@@ -100,17 +100,16 @@ class block_mhaairs_service_test_form extends moodleform {
         );
         $label = get_string('authmethod', 'webservice');
         $mform->addElement('select', 'authmethod', $label, $authmethods);
-        $mform->setType('simple', PARAM_ALPHA);
+        $mform->setType('authmethod', PARAM_ALPHA);
+        $mform->setDefault('authmethod', 'token');
 
         // Username password auth.
         $mform->addElement('text', 'wsusername', 'mhusername');
         $mform->setType('wsusername', PARAM_USERNAME);
-        $mform->setDefault('wsusername', 'mhaairs');
         $mform->disabledIf('wsusername', 'authmethod', 'neq', 'simple');
 
         $mform->addElement('text', 'wspassword', 'mhpassword');
         $mform->setType('wspassword', PARAM_RAW);
-        $mform->setDefault('wspassword', 'mh1Aairs$');
         $mform->disabledIf('wspassword', 'authmethod', 'neq', 'simple');
 
         // Token auth.
@@ -149,7 +148,7 @@ class block_mhaairs_service_test_form extends moodleform {
 /**
  * Mhaairs gradebook service test client.
  */
-class block_mhaairs_gradebookservice_test_form extends block_mhaairs_service_test_form {
+class block_mhaairs_update_grade_form extends block_mhaairs_service_form {
 
     protected function custom_definition() {
         $mform = $this->_form;
@@ -201,6 +200,7 @@ class block_mhaairs_gradebookservice_test_form extends block_mhaairs_service_tes
         $dataset = 'itemdetails';
 
         $identitytypes = array(
+            '' => get_string('choosedots'),
             'internal' => 'internal',
             'lti' => 'lti'
         );
@@ -285,4 +285,10 @@ class block_mhaairs_gradebookservice_test_form extends block_mhaairs_service_tes
 
         return $this->format_params($serviceparams);
     }
+}
+
+/**
+ * Mhaairs gradebook service test client.
+ */
+class block_mhaairs_gradebookservice_form extends block_mhaairs_update_grade_form {
 }
