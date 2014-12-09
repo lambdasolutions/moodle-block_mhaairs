@@ -32,7 +32,7 @@ $userid = optional_param('userid', null, PARAM_INT);
 $password = optional_param('password', null, PARAM_TEXT);
 $identitytype = optional_param('identitytype', null, PARAM_TEXT);
 
-if ((strcasecmp($secure, 'on') == 0) && !empty($CFG->block_mhaairs_sslonly)) {
+if (empty($secure) and !empty($CFG->block_mhaairs_sslonly)) {
     echo 'Connection must be secured with SSL';
     return;
 }
