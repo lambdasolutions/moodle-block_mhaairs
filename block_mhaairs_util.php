@@ -506,3 +506,174 @@ class MHAuthenticationResult {
     }
 }
 
+/**
+ * Class block_mhaairs_log
+ */
+class MHLog {
+    /* @var string */
+    protected $filepath = null;
+
+    /* @var string */
+    protected $dirpath = null;
+
+    /* @var null|bool */
+    protected $logenabled = null;
+
+    /* @var block_mhaairs_log */
+    private static $instance = null;
+
+    /**
+     * @return block_mhaairs_log
+     */
+    public static function instance($reset = false) {
+        if ($reset or !self::$instance instanceof self) {
+            self::$instance = new self;
+        }
+        return self::$instance;
+    }
+
+    /**
+     * @param null|bool $enabled
+     */
+    private function __construct() {
+        $this->filepath = null;
+        $this->logenabled = !empty(get_config('core', 'block_mhaairs_gradelog'));
+        $dir = $this->dirpath;
+        if ($dir === null) {
+            $mdata = get_config('core', 'dataroot');
+            $sep = DIRECTORY_SEPARATOR;
+            $dir = make_writable_directory("{$mdata}{$sep}mhaairs", false);
+        }
+        if ($dir !== false) {
+            $this->dirpath = $dir;
+            $fileprefix = userdate(time(), 'mhaairs_%Y-%m-%d_%H-%M-%S_');
+            while (empty($this->filepath)) {
+                $name = uniqid($fileprefix, true);
+                $fullname = "{$dir}{$sep}{$name}.log";
+                if (!file_exists($fullname)) {
+                    $this->filepath = $fullname;
+                }
+            }
+        }
+    }
+
+    /**
+     * DTOR
+     */
+    public function __destruct() {
+        $this->filepath = null;
+        $this->logenabled = null;
+    }
+
+    /**
+     * Magic get method
+     *
+     * Attempts to call a get_$key method to return the property and ralls over
+     * to return the raw property
+     *
+     * @param str $key
+     * @return mixed
+     */
+    public function __get($key) {
+        if (method_exists($this, 'get_'.$key)) {
+            return $this->{'get_'.$key}();
+        }
+        return null;
+    }
+
+    /**
+     * Writes the specified data into the current log file.
+     *
+     * @param string $data
+     * @return int|bool
+     */
+    public function log($data) {
+        if ($this->logenabled && $this->filepath) {
+            return file_put_contents($this->filepath, $data.PHP_EOL, FILE_APPEND);
+        }
+        return false;
+    }
+
+    /**
+     * @return bool
+     */
+    public function get_filepath() {
+        return $this->filepath;
+    }
+
+    /**
+     * Return formatted time stamp.
+     *
+     * @return string
+     */
+    public function get_time_stamp() {
+        $timeformat = get_string('strftimedatetime', 'core_langconfig');
+        return userdate(time(), $timeformat);
+    }
+
+    /**
+     * @return bool
+     */
+    public function get_logenabled() {
+        return $this->logenabled;
+    }
+
+    /**
+     * Delete current log file
+     */
+    public function delete() {
+        if (is_writable($this->filepath)) {
+            unlink($this->filepath);
+        }
+    }
+
+    /**
+     * Delete entire log directory
+     */
+    public function delete_all() {
+        if (is_dir($this->dirpath) && is_writable($this->dirpath)) {
+            $fileleft = false;
+            $it = new RecursiveDirectoryIterator($this->dirpath, RecursiveDirectoryIterator::SKIP_DOTS);
+            $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
+            foreach ($files as $file) {
+                if ($file->getFilename() === '.' || $file->getFilename() === '..') {
+                    continue;
+                }
+                $rpath = $file->getRealPath();
+                if (is_writable($rpath)) {
+                    if ($file->isDir()) {
+                        rmdir($rpath);
+                    } else {
+                        unlink($rpath);
+                    }
+                } else {
+                    $fileleft = true;
+                }
+            }
+            if (!$fileleft) {
+                rmdir($this->dirpath);
+            }
+        }
+    }
+
+    /**
+     * Returns a list of existing logs.
+     *
+     * @return array
+     */
+    public function get_logs() {
+        $logs = array();
+        if (is_dir($this->dirpath)) {
+            $it = new RecursiveDirectoryIterator($this->dirpath, RecursiveDirectoryIterator::SKIP_DOTS);
+            $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
+            foreach ($files as $file) {
+                $filename = $file->getFilename();
+                if ($filename === '.' || $filename === '..') {
+                    continue;
+                }
+                $logs[] = $filename;
+            }
+        }
+        return $logs;
+    }
+}

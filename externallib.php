@@ -62,9 +62,23 @@ class block_mhaairs_gradebookservice_external extends external_api {
                                             $grades = null, $itemdetails = null) {
         global $USER, $DB;
 
+        $logger = MHLog::instance();
+        $logger->log('==================================');
+        $logger->log('New webservice request started on '. $logger->time_stamp);
+        $logger->log('Entry parameters:');
+        $logger->log("source = {$source}");
+        $logger->log("courseid = {$courseid}");
+        $logger->log("itemtype = {$itemtype}");
+        $logger->log("itemmodule = {$itemmodule}");
+        $logger->log("iteminstance = {$iteminstance}");
+        $logger->log("itemnumber = {$itemnumber}");
+        $logger->log("grades = {$grades}");
+        $logger->log("itemdetails = {$itemdetails}");
+
         // Gradebook sync must be enabled by admin in the block's site configuration.
         $syncgrades = get_config('core', 'block_mhaairs_sync_gradebook');
         if (!$syncgrades) {
+            $logger->log('Grade sync is not enabled in global settings. Returning 1.');
             return GRADE_UPDATE_FAILED;
         }
 
@@ -74,10 +88,12 @@ class block_mhaairs_gradebookservice_external extends external_api {
         // OPTIONAL but in most web service it should be present.
         $context = context_user::instance($USER->id);
         self::validate_context($context);
+        $logger->log('Context validated.');
 
         // Capability checking.
         // OPTIONAL but in most web service it should be present.
         require_capability('moodle/user:viewdetails', $context, null, true, 'cannotviewprofile');
+        $logger->log('Capability validated.');
 
         // Decode item details and check for problems.
         $itemdetails = json_decode(urldecode($itemdetails), true);
@@ -85,6 +101,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $cancreategradeitem = false;
 
         if ($itemdetails != "null" && $itemdetails != null) {
+            $logger->log("Checking itemdetails: ". var_export($itemdetails, true));
             // Check type of each parameter.
             self::check_valid($itemdetails, 'categoryid', 'string', $badchars);
             self::check_valid($itemdetails, 'courseid', 'string');
@@ -102,12 +119,14 @@ class block_mhaairs_gradebookservice_external extends external_api {
             $course = self::get_course($courseid, $idonly);
             if ($course === false) {
                 // We got invalid course id!
+                $logger->log("Course id received was not correct. courseid = {$courseid}. Returning 1.");
                 return GRADE_UPDATE_FAILED;
             }
             $courseid = $course->id;
             $itemdetails['courseid'] = $course->id;
 
             if (!empty($itemdetails['categoryid']) && $itemdetails['categoryid'] != 'null') {
+                $logger->log("Preparing to check and create grade category if needed.");
                 self::handle_grade_category($itemdetails, $courseid);
             }
 
@@ -128,10 +147,12 @@ class block_mhaairs_gradebookservice_external extends external_api {
             $course = self::get_course($courseid);
             if ($course === false) {
                 // No valid course specified.
+                $logger->log("Course id received was not correct. courseid = {$courseid}. Returning 1.");
                 return GRADE_UPDATE_FAILED;
             }
         }
 
+        $logger->log("Preparing to check if any grades where sent.");
         if (($grades != "null") && ($grades != null)) {
             $grades = json_decode(urldecode($grades), true);
             if (is_array($grades)) {
@@ -146,18 +167,22 @@ class block_mhaairs_gradebookservice_external extends external_api {
                     }
                 }
             } else {
+                $logger->log("No grades detected in encoded JSON!");
                 $grades = null;
             }
         } else {
+            $logger->log("No grades detected!");
             $grades = null;
         }
 
         if (!$cancreategradeitem) {
+            $logger->log('We do not have enough information to create new grades so we check if grade item already exists.');
             // Check if grade item exists the same way grade_update does.
             $grparams = compact('courseid', 'itemtype', 'itemmodule',
                                 'iteminstance', 'itemnumber');
             $gritems = grade_item::fetch_all($grparams);
             if ($gritems === false) {
+                $logger->log('No grade item available. Returning 1.');
                 return GRADE_UPDATE_FAILED;
             }
         }
@@ -166,6 +191,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $result = grade_update($source, $courseid, $itemtype, $itemmodule,
                                $iteminstance, $itemnumber, $grades, $itemdetails);
 
+        $logger->log('Executed grade_update API. Returned result is '.$result);
         if (!empty($itemdetails['categoryid']) && ($itemdetails['categoryid'] != 'null')) {
             // Optional.
             try {
@@ -174,9 +200,11 @@ class block_mhaairs_gradebookservice_external extends external_api {
                     // Change the category of the Grade we just updated/created.
                     $gradeitem->categoryid = (int)$itemdetails['categoryid'];
                     $gradeitem->update();
+                    $logger->log("Changed category of a grade we just updated or created {$grade_item->id}.");
                 }
             } catch (Exception $e) {
                 // Silence the exception.
+                $logger->log("Failed to change category of a grade we just updated or created. idnumber = {$itemdetails['idnumber']}");
             }
         }
 
@@ -290,7 +318,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
      * @param int $courseid
      * @return void
      */
-    protected function handle_grade_category(&$itemdetails, $courseid) {
+    protected static function handle_grade_category(&$itemdetails, $courseid) {
         global $CFG;
 
         require_once($CFG->dirroot.'/blocks/mhaairs/lib/lock/abstractlock.php');

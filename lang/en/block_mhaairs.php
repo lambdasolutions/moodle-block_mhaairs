@@ -96,3 +96,12 @@ $string['xml'] = 'XML';
 $string['responseformat'] = 'Response format';
 $string['simple'] = 'Username/Password';
 $string['token'] = 'Token';
+
+// Strings for log support.
+$string['gradelog'] = 'Grade exchange log';
+$string['gradelogdesc'] = 'Log grade exchange raw data for debugging purporses.
+Should be disabled on production sites. Log files are stored in moodledata directory [moodledata]/mhaairs.
+Every individual web service request generates separate log file with filename format
+mhaairs_year-month-day_hour-min-sec_randomkey.log';
+$string['gradelogs'] = 'Grade exchange logs';
+$string['nogradelogs'] = 'There are no grade exchange logs.';
