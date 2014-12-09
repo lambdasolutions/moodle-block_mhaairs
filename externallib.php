@@ -200,11 +200,13 @@ class block_mhaairs_gradebookservice_external extends external_api {
                     // Change the category of the Grade we just updated/created.
                     $gradeitem->categoryid = (int)$itemdetails['categoryid'];
                     $gradeitem->update();
-                    $logger->log("Changed category of a grade we just updated or created {$grade_item->id}.");
+                    $logger->log("Changed category of a grade we just updated or created {$gradeitem->id}.");
                 }
             } catch (Exception $e) {
                 // Silence the exception.
-                $logger->log("Failed to change category of a grade we just updated or created. idnumber = {$itemdetails['idnumber']}");
+                $logdata = 'Failed to change category of a grade we just updated or created.';
+                $logdata .= 'idnumber = '. $itemdetails['idnumber'];
+                $logger->log($logdata);
             }
         }
 
