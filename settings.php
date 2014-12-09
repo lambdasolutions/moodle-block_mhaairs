@@ -26,6 +26,11 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+$admincatstr = new lang_string('pluginname', 'block_mhaairs');
+$ADMIN->add('blocksettings', new admin_category('blockmhaairsfolder', $admincatstr, $block->is_enabled() === false));
+
+$settings = new admin_settingpage($section, get_string('settings'), 'moodle/site:config', $block->is_enabled() === false);
+
 if ($ADMIN->fulltree) {
     require_once($CFG->dirroot.'/blocks/mhaairs/settingslib.php');
 
@@ -86,4 +91,32 @@ if ($ADMIN->fulltree) {
         'nonelock',
         array('nonelock' => 'No locking', 'filelock' => 'File locking', 'redislock' => 'Redis locking')
     ));
+
+    // Grade exchange log.
+    $settings->add(new admin_setting_configcheckbox(
+            'block_mhaairs_gradelog',
+            new lang_string('gradelog', 'block_mhaairs'),
+            new lang_string('gradelogdesc', 'block_mhaairs'),
+            '0'
+    ));
 }
+
+$ADMIN->add('blockmhaairsfolder', $settings);
+// Tell core we already added the settings structure.
+$settings = null;
+
+// Test client.
+$externalpage = new admin_externalpage(
+    'blockmhaairs_testclient',
+    new lang_string('testclient', 'webservice'),
+    '/blocks/mhaairs/admin/testclient.php'
+);
+$ADMIN->add('blockmhaairsfolder', $externalpage);
+
+// Reset debugging logs.
+$externalpage = new admin_externalpage(
+    'blockmhaairs_gradelogs',
+    new lang_string('gradelogs', 'block_mhaairs'),
+    '/blocks/mhaairs/admin/gradelogs.php'
+);
+$ADMIN->add('blockmhaairsfolder', $externalpage);
