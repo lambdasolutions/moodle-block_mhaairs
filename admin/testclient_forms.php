@@ -146,7 +146,7 @@ class block_mhaairs_service_form extends moodleform {
 
 
 /**
- * Mhaairs gradebook service test client.
+ * Block mhaairs update grade test client form.
  */
 class block_mhaairs_update_grade_form extends block_mhaairs_service_form {
 
@@ -288,7 +288,148 @@ class block_mhaairs_update_grade_form extends block_mhaairs_service_form {
 }
 
 /**
- * Mhaairs gradebook service test client.
+ * Block mhaairs get grade test client form.
+ */
+class block_mhaairs_get_grade_form extends block_mhaairs_service_form {
+
+    protected function custom_definition() {
+        $mform = $this->_form;
+
+        $mform->addElement('header', 'mhdefserviceparamshdr', 'Service params');
+        $mform->setExpanded('mhdefserviceparamshdr');
+        $this->definition_service_params();
+
+        $mform->addElement('header', 'mhdefitemdetailshdr', 'Item details');
+        $mform->setExpanded('mhdefitemdetailshdr');
+        $this->definition_item_details();
+
+        $mform->addElement('header', 'mhdefgradeshdr', 'Grades');
+        $mform->setExpanded('mhdefgradeshdr');
+        $this->definition_grades();
+    }
+
+    protected function definition_service_params() {
+        $mform = $this->_form;
+
+        $dataset = 'serviceparams';
+
+        $fields = array(
+            'source' => array('text', 'Source of grade', 'mhaairs'),
+            'courseid' => array('text', 'Course id', ''),
+            'itemtype' => array('text', 'Item type', 'mod'),
+            'itemmodule' => array('text', 'Item module', 'assignment'),
+            'iteminstance' => array('text', 'Item instance', 0),
+            'itemnumber' => array('text', 'Item number', 0),
+        );
+
+        foreach ($fields as $key => $def) {
+            list($type, $label, $default, $options) = array_pad($def, 4, null);
+            if ($type == 'select') {
+                $mform->addElement($type, $dataset. "[$key]", $label, $options);
+            } else {
+                $mform->addElement($type, $dataset. "[$key]", $label);
+            }
+            if ($type == 'text') {
+                $mform->setType($dataset. "[$key]", PARAM_TEXT);
+            }
+            $mform->setDefault($dataset. "[$key]", $default);
+        }
+    }
+
+    protected function definition_item_details() {
+        $mform = $this->_form;
+
+        $dataset = 'itemdetails';
+
+        $identitytypes = array(
+            '' => get_string('choosedots'),
+            'internal' => 'internal',
+            'lti' => 'lti'
+        );
+
+        $fields = array(
+            'categoryid' => array('text', 'Category id', ''),
+            'courseid' => array('text', 'Course id', ''),
+            'identity_type' => array('select', 'Identify type', '', $identitytypes),
+            'itemname' => array('text', 'Item name', ''),
+            'itemtype' => array('text', 'Item type', 'mod'),
+            'idnumber' => array('text', 'Id number', 0),
+            'gradetype' => array('text', 'Grade type', GRADE_TYPE_VALUE),
+            'grademax' => array('text', 'Grade max', 100),
+            'iteminfo' => array('text', 'Item info', ''),
+        );
+
+        // Enable data set.
+        $mform->addElement('advcheckbox', "enable$dataset", 'Enable');
+
+        foreach ($fields as $key => $def) {
+            list($type, $label, $default, $options) = array_pad($def, 4, null);
+            if ($type == 'select') {
+                $mform->addElement($type, $dataset. "[$key]", $label, $options);
+            } else {
+                $mform->addElement($type, $dataset. "[$key]", $label);
+            }
+            if ($type == 'text') {
+                $mform->setType($dataset. "[$key]", PARAM_TEXT);
+            }
+            $mform->setDefault($dataset. "[$key]", $default);
+            $mform->disabledIf($dataset. "[$key]", "enable$dataset", 'eq', 0);
+        }
+    }
+
+    protected function definition_grades() {
+        $mform = $this->_form;
+
+        $dataset = 'grades';
+
+        $fields = array(
+            'userid' => array('text', 'User id', ''),
+        );
+
+        // Enable data set.
+        $mform->addElement('advcheckbox', "enable$dataset", 'Enable');
+
+        foreach ($fields as $key => $def) {
+            list($type, $label, $default, $options) = array_pad($def, 4, null);
+            if ($type == 'select') {
+                $mform->addElement($type, $dataset. "[$key]", $label, $options);
+            } else {
+                $mform->addElement($type, $dataset. "[$key]", $label);
+            }
+            if ($type == 'text') {
+                $mform->setType($dataset. "[$key]", PARAM_TEXT);
+            }
+            $mform->setDefault($dataset. "[$key]", $default);
+            $mform->disabledIf($dataset. "[$key]", "enable$dataset", 'eq', 0);
+        }
+    }
+
+    public function get_params() {
+        if (!$data = $this->get_data()) {
+            return null;
+        }
+
+        $serviceparams = (object) $data->serviceparams;
+        $serviceparams->itemdetails = null;
+        $serviceparams->grades = null;
+
+        // Add itemdetails.
+        if (!empty($data->enableitemdetails)) {
+            $serviceparams->itemdetails = urlencode(json_encode($data->itemdetails));
+        }
+
+        // Add grades.
+        if (!empty($data->enablegrades)) {
+            $serviceparams->grades = urlencode(json_encode($data->grades));
+        }
+
+        return $this->format_params($serviceparams);
+    }
+}
+
+/**
+ * Block mhaairs gradebookservice test client form.
+ * Alias for block mhaairs update grade test client form.
  */
 class block_mhaairs_gradebookservice_form extends block_mhaairs_update_grade_form {
 }

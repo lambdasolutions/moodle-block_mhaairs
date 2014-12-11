@@ -45,6 +45,16 @@ $functions = array(
                 'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
         ),
 
+        'block_mhaairs_get_grade' => array(
+                'classname' => 'block_mhaairs_gradebookservice_external',
+                'methodname' => 'get_grade',
+                'classpath' => 'blocks/mhaairs/externallib.php',
+                'description' => 'Returns grade item info and or student grade for the item.',
+                'type' => 'read',
+                'capabilities' => 'moodle/grade:view, moodle/grade:viewall, moodle/grade:viewhidden',
+                'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
+        ),
+
         'block_mhaairs_get_user_info' => array(
                 'classname' => 'block_mhaairs_utilservice_external',
                 'methodname' => 'get_user_info',
