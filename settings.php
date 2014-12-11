@@ -26,10 +26,14 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$admincatstr = new lang_string('pluginname', 'block_mhaairs');
-$ADMIN->add('blocksettings', new admin_category('blockmhaairsfolder', $admincatstr, $block->is_enabled() === false));
+// Backwards compatibility.
+$blockisenabled = method_exists($block, 'is_enabled') ? $block->is_enabled() : !empty($block->visible);
+$section = !empty($section) ? $section : 'blocks';
 
-$settings = new admin_settingpage($section, get_string('settings'), 'moodle/site:config', $block->is_enabled() === false);
+$admincatstr = new lang_string('pluginname', 'block_mhaairs');
+$ADMIN->add('blocksettings', new admin_category('blockmhaairsfolder', $admincatstr, $blockisenabled === false));
+
+$settings = new admin_settingpage($section, get_string('settings'), 'moodle/site:config', $blockisenabled === false);
 
 if ($ADMIN->fulltree) {
     require_once($CFG->dirroot.'/blocks/mhaairs/settingslib.php');
