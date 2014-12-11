@@ -124,12 +124,8 @@ class MHUtil {
      *
      */
     public static function get_token($token) {
-        try {
-            $pos = strpos($token, ';');
-            return substr($token, $pos + 1, strlen($token) - $pos);
-        } catch (Exception $e) {
-            return '';
-        }
+        list( , $value) = array_pad(explode(';', $token, 2), 2, '');
+        return $value;
     }
 
     /**
@@ -138,12 +134,8 @@ class MHUtil {
      * @return string
      */
     public static function get_hash($token) {
-        try {
-            $pos = strpos($token, ';');
-            return substr($token, 0, $pos);
-        } catch (Exception $e) {
-            return '';
-        }
+        list($value, ) = array_pad(explode(';', $token, 2), 2, '');
+        return $value;
     }
 
     /**
@@ -184,12 +176,16 @@ class MHUtil {
             $truehash = md5($token.$secret);
             if ($truehash === $hash) {
                 $trace = $trace."the hash is good;";
-                $tokentimetext = self::get_token_value($decodedtoken, "time");
-                $tokentime = strtotime($tokentimetext);
+                // Calculate the interval.
+                $tokentimetext = self::get_token_value($token, "time");
+                $tokentime = (int) strtotime($tokentimetext);
                 $currenttime = time();
-                $interval = ((int)$currenttime) - ((int)$tokentime);
-                $trace = $trace.";interval=".$interval;
-                return ($interval < $delay && $interval >= -$delay);
+                $interval = $currenttime - $tokentime;
+                $trace = $trace. ";interval=". $interval;
+                // Is the token within the allowed timeframe?
+                $intime = ($interval < $delay && $interval >= -$delay);
+
+                return $intime;
             } else {
                 $trace = $trace."the hash is bad;";
             }

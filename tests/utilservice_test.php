@@ -118,13 +118,11 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
      * @return void
      */
     public function test_get_user_info_no_ssl() {
-        global $DB;
-
         $callback = 'block_mhaairs_utilservice_external::get_user_info';
         $this->set_user('admin');
 
         // Require ssl.
-        $DB->set_field('config', 'value', 1, array('name' => 'block_mhaairs_sslonly'));
+        set_config('block_mhaairs_sslonly', 1);
 
         // Service params.
         $serviceparams = array(
@@ -144,8 +142,6 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
      * @return void
      */
     public function test_get_user_info_invalid_token() {
-        global $DB;
-
         $callback = 'block_mhaairs_utilservice_external::get_user_info';
         $this->set_user('admin');
 
@@ -166,7 +162,7 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
         $this->assert_invalid_token("userid=$userid", $secret, !$equal);
 
         // SECRET CONFIGURED.
-        $DB->set_field('config', 'value', $secret, array('name' => 'block_mhaairs_shared_secret'));
+        set_config('block_mhaairs_shared_secret', $secret);
 
         // Invalid token missing userid.
         // Should fail with or without a correct secret.
@@ -174,10 +170,12 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
         $this->assert_invalid_token('time='. MHUtil::get_time_stamp(), $secret);
 
         // Invalid token with userid.
-        // Should NOT fail with or without a correct secret.
-        $this->assert_invalid_token("userid=$userid", null, !$equal);
-        $this->assert_invalid_token("userid=$userid", $secret, !$equal);
-        $this->assert_invalid_token(MHUtil::create_token($userid), $secret. '7', !$equal);
+        // Should fail with or without a correct secret.
+        $this->assert_invalid_token("userid=$userid", null, $equal);
+        $this->assert_invalid_token("userid=$userid", $secret, $equal);
+
+        // Valid token, incorrect secret.
+        $this->assert_invalid_token(MHUtil::create_token($userid), $secret. '7', $equal);
 
     }
 
@@ -189,8 +187,6 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
      * @return void
      */
     public function test_get_user_info_invalid_user() {
-        global $DB;
-
         $callback = 'block_mhaairs_utilservice_external::get_user_info';
         $this->set_user('admin');
 
@@ -214,19 +210,12 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
             $cases[] = (object) array_combine($columns, $rows->getRow($r));
         }
 
-        // SECRET NOT CONFIGURED.
-        foreach ($cases as $case) {
-            $auserid = ${$case->userid};
-            $asecret = $case->secret == 'secret' ? ${$case->secret} : $case->secret;
-            $this->assert_user_not_found($auserid, $asecret, $case->identitytype);
-        }
+        // Configure secret.
+        set_config('block_mhaairs_shared_secret', $secret);
 
-        // SECRET CONFIGURED.
-        $DB->set_field('config', 'value', $secret, array('name' => 'block_mhaairs_shared_secret'));
         foreach ($cases as $case) {
             $auserid = ${$case->userid};
-            $asecret = $case->secret == 'secret' ? ${$case->secret} : $case->secret;
-            $this->assert_user_not_found($auserid, $asecret, $case->identitytype);
+            $this->assert_user_not_found($auserid, $secret, $case->identitytype);
         }
 
     }
@@ -293,7 +282,7 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
         }
 
         // Tese cases dataset.
-        // User id, secret, identity type.
+        // User id, identity type.
         $fixture = __DIR__. '/fixtures/tc_get_user_info_user_found.csv';
         $dataset = $this->createCsvDataSet(array('cases' => $fixture));
         $rows = $dataset->getTable('cases');
@@ -304,21 +293,13 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
             $cases[] = (object) array_combine($columns, $rows->getRow($r));
         }
 
-        // SECRET NOT CONFIGURED.
-        foreach ($cases as $case) {
-            $internal = ($case->identitytype == 'internal');
-            $auserid = ($internal ? $users[$case->username]->id : $case->username);
-            $asecret = $case->secret == 'secret' ? ${$case->secret} : $case->secret;
-            $this->assert_user_found($auserid, $asecret, $case);
-        }
+        // Configure secret.
+        set_config('block_mhaairs_shared_secret', $secret);
 
-        // SECRET CONFIGURED.
-        $DB->set_field('config', 'value', $secret, array('name' => 'block_mhaairs_shared_secret'));
         foreach ($cases as $case) {
             $internal = ($case->identitytype == 'internal');
             $auserid = ($internal ? $users[$case->username]->id : $case->username);
-            $asecret = $case->secret == 'secret' ? ${$case->secret} : $case->secret;
-            $this->assert_user_found($auserid, $asecret, $case);
+            $this->assert_user_found($auserid, $secret, $case);
         }
 
     }
@@ -356,9 +337,9 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
     }
 
     /**
-     * Asserts invalid token against get_user_info with the specified token and secret.
-     * If secret is omitted, try to take the secret from the configuration. The secret
-     * parameter is used for creating the encoded token.
+     * Asserts get user info failure on user not found.
+     * The userid and secret parameters are used for creating an encoded token
+     * of the target user.
      *
      * @param string $userid
      * @param string $secret
@@ -387,9 +368,10 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
     }
 
     /**
-     * Asserts invalid token against get_user_info with the specified token and secret.
-     * If secret is omitted, try to take the secret from the configuration. The secret
-     * parameter is used for creating the encoded token.
+     * Asserts successful calls to get user info.
+     * The userid and secret parameters are used for creating an encoded token
+     * of the target user.
+     * The method checks the result status, message, user->username and number of courses.
      *
      * @param string $userid
      * @param string $secret
