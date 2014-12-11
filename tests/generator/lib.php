@@ -25,6 +25,11 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+// Backwards compatibility.
+if (!class_exists('testing_block_generator')) {
+    abstract class testing_block_generator extends phpunit_block_generator {
+    }
+}
 
 /**
  * Mhaairs block data generator class
