@@ -97,41 +97,6 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
     }
 
     /**
-     * Sets the user.
-     *
-     * @return void
-     */
-    protected function set_user($username) {
-        if ($username == 'admin') {
-            $this->setAdminUser();
-        } else if ($username == 'guest') {
-            $this->setGuestUser();
-        } else {
-            $this->setUser($this->$username);
-        }
-    }
-
-    /**
-     * Asserts equals grade item values and expected values.
-     *
-     * @param grade_item $gitem
-     * @param array $expected
-     * @return void
-     */
-    protected function grade_item_assert_equals($gitem, array $expected) {
-        // Some fields should be asserted separately.
-        unset($expected['courseid']);
-        unset($expected['categoryid']);
-
-        $this->assertEquals($this->course->id, $gitem->courseid);
-        foreach ($gitem as $var => $value) {
-            if (array_key_exists($var, $expected)) {
-                $this->assertEquals($expected[$var], $value);
-            }
-        }
-    }
-
-    /**
      * Gradebookservice update grade should fail when sync grades is disabled
      * in the plugin site settings.
      *
@@ -227,7 +192,7 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
      *
      * @return void
      */
-    public function test_update_grade_item() {
+    public function test_create_update_delete_grade_item() {
         global $DB;
 
         $callback = 'block_mhaairs_gradebookservice_external::gradebookservice';
@@ -321,4 +286,171 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
 
         $this->assertEquals(1, $DB->count_records('grade_items'));
     }
+
+    /**
+     * Tests the gradebookservice update grade with cases that should
+     * result in success.
+     *
+     * @return void
+     */
+    public function test_update_grade_item_valid() {
+        global $DB;
+
+        $callback = 'block_mhaairs_gradebookservice_external::update_grade';
+        $this->set_user('admin');
+
+        // CREATE/UPDATE.
+        $cases = $this->get_update_grade_servicedata_cases('tc_update_grade_valid');
+        foreach ($cases as $case) {
+            if (!empty($case->hidden)) {
+                continue;
+            }
+            $result = call_user_func_array($callback, $case->servicedata);
+            $this->assertEquals(GRADE_UPDATE_OK, $result);
+        }
+    }
+
+    /**
+     * Tests the gradebookservice update grade with cases that should
+     * result in failure.
+     *
+     * @return void
+     */
+    public function test_update_grade_item_invalid() {
+        global $DB;
+
+        $callback = 'block_mhaairs_gradebookservice_external::update_grade';
+        $this->set_user('admin');
+
+        // CREATE/UPDATE.
+        $cases = $this->get_update_grade_servicedata_cases('tc_update_grade_invalid');
+        foreach ($cases as $case) {
+            if (!empty($case->hidden)) {
+                continue;
+            }
+            $result = call_user_func_array($callback, $case->servicedata);
+            $this->assertEquals(GRADE_UPDATE_FAILED, $result);
+        }
+    }
+
+    /**
+     * Sets the user.
+     *
+     * @return void
+     */
+    protected function set_user($username) {
+        if ($username == 'admin') {
+            $this->setAdminUser();
+        } else if ($username == 'guest') {
+            $this->setGuestUser();
+        } else {
+            $this->setUser($this->$username);
+        }
+    }
+
+    /**
+     * Asserts equals grade item values and expected values.
+     *
+     * @param grade_item $gitem
+     * @param array $expected
+     * @return void
+     */
+    protected function grade_item_assert_equals($gitem, array $expected) {
+        // Some fields should be asserted separately.
+        unset($expected['courseid']);
+        unset($expected['categoryid']);
+
+        $this->assertEquals($this->course->id, $gitem->courseid);
+        foreach ($gitem as $var => $value) {
+            if (array_key_exists($var, $expected)) {
+                $this->assertEquals($expected[$var], $value);
+            }
+        }
+    }
+
+    /**
+     *
+     * @return array
+     */
+    protected function get_update_grade_servicedata_cases($fixturename) {
+        // Test cases.
+        $fixture = __DIR__. "/fixtures/$fixturename.csv";
+        $dataset = $this->createCsvDataSet(array('cases' => $fixture));
+        $rows = $dataset->getTable('cases');
+        $columns = $dataset->getTableMetaData('cases')->getColumns();
+
+        $cases = array();
+        for ($r = 0; $r < $rows->getRowCount(); $r++) {
+            $cases[] = (object) array_combine($columns, $rows->getRow($r));
+        }
+
+        // Item details.
+        $itemdetailsparams = array(
+            'categoryid',
+            'courseid',
+            'identity_type',
+            'itemname',
+            'itemtype',
+            'idnumber',
+            'gradetype',
+            'grademax',
+            'iteminfo',
+        );
+
+        // Grades.
+        $gradeparams = array(
+            'userid',
+            'grade',
+        );
+
+        // Service params.
+        $serviceparams = array(
+            'source', // Source.
+            'courseid', // Course id.
+            'itemtype', // Item type.
+            'itemmodule', // Item module.
+            'iteminstance', // Item instance.
+            'itemnumber', // Item number.
+            'grades' => null, // Grades.
+            'itemdetails' => null, // Item details.
+        );
+
+        foreach ($cases as $case) {
+            // Compile the item details.
+            $itemdetails = array();
+            foreach ($itemdetailsparams as $param) {
+                $caseparam = "item_$param";
+                if (isset($case->$caseparam)) {
+                    $itemdetails[$param] = $case->$caseparam;
+                }
+            }
+            $itemdetails = $itemdetails ? $itemdetails : null;
+            $itemdetailsjson = urlencode(json_encode($itemdetails));
+
+            // Compile the grades.
+            $grades = array();
+            foreach ($gradeparams as $param) {
+                $caseparam = "grade_$param";
+                if (isset($case->$caseparam)) {
+                    $grades[$param] = $case->$caseparam;
+                }
+            }
+            $grades = $grades ? $grades : null;
+            $gradesjson = urlencode(json_encode($grades));
+
+            // Compile the service params.
+            $servicedata = array();
+            foreach ($serviceparams as $param) {
+                $value = isset($case->$param) ? $case->$param : '';
+                $servicedata[$param] = $value;
+            }
+            $servicedata['itemdetails'] = $itemdetailsjson;
+            $servicedata['grades'] = $gradesjson;
+
+            $case->servicedata = $servicedata;
+        }
+
+        return $cases;
+    }
+
 }
