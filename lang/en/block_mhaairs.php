@@ -21,6 +21,8 @@ defined('MOODLE_INTERNAL') || die();
 $string['pluginname'] = 'McGraw-Hill AAIRS';
 $string['mhaairs'   ] = 'MH AAIRS';
 
+// Strings for capabilities.
+$string['mhaairs:myaddinstance'] = 'Add an instance of McGraw-Hill AAIRS block to the my page.';
 $string['mhaairs:viewadmindoc'  ] = 'View Administrator Documentation';
 $string['mhaairs:viewteacherdoc'] = 'View Teacher Documentation';
 $string['mhaairs:addinstance'   ] = 'Add a new McGraw-Hill AAIRS block';
@@ -72,7 +74,13 @@ $string['nolinkdefined'] = ' No link type defined. ';
 $string['error_tokeninvalid'] = 'Error: Token is invalid.';
 $string['error_notsecuressl'] = 'Error: Connection must be secured with SSL.';
 
-// Strings that may be needed by the gradebook test client.
+// Strings for the test client.
+$string['json'] = 'JSON';
+$string['xml'] = 'XML';
+$string['responseformat'] = 'Response format';
+$string['simple'] = 'Username/Password';
+$string['token'] = 'Token';
+
 $string['get_completion_course_desc'] = 'Course for which to get the completion status';
 $string['get_completion_user_desc'] = 'User for which to get the completion status';
 $string['get_completion_completion_desc'] = 'Course Completion status';
@@ -88,14 +96,6 @@ $string['error_no_user'] = 'User does not exist!';
 $string['error_no_course_completion'] = 'Completion is not enabled for this course!';
 $string['error_no_system_completion'] = 'Completion is not enabled on this instance!';
 $string['error_invalid_course_param'] = 'Invalid course parameter passed!';
-$string['mhaairs:myaddinstance'] = 'Add an instance of McGraw-Hill AAIRS block to the my page.';
-
-// Strings for test client.
-$string['json'] = 'JSON';
-$string['xml'] = 'XML';
-$string['responseformat'] = 'Response format';
-$string['simple'] = 'Username/Password';
-$string['token'] = 'Token';
 
 // Strings for log support.
 $string['gradelog'] = 'Grade exchange log';
