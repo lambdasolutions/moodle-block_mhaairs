@@ -105,3 +105,9 @@ Every individual web service request generates separate log file with filename f
 mhaairs_year-month-day_hour-min-sec_randomkey.log';
 $string['gradelogs'] = 'Grade exchange logs';
 $string['nogradelogs'] = 'There are no grade exchange logs.';
+
+// Strings for reset caches.
+$string['resetcaches'] = 'Reset caches';
+$string['cacheservices'] = 'Services';
+$string['cachehelp'] = 'Help links';
+$string['nocachefound'] = 'No cache found';

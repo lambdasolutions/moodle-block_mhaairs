@@ -124,3 +124,11 @@ $externalpage = new admin_externalpage(
     '/blocks/mhaairs/admin/gradelogs.php'
 );
 $ADMIN->add('blockmhaairsfolder', $externalpage);
+
+// Reset caches.
+$externalpage = new admin_externalpage(
+    'blockmhaairs_resetcaches',
+    new lang_string('resetcaches', 'block_mhaairs'),
+    '/blocks/mhaairs/admin/resetcaches.php'
+);
+$ADMIN->add('blockmhaairsfolder', $externalpage);

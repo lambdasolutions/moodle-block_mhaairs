@@ -92,7 +92,7 @@ class block_mhaairs_connect {
         $resultdata = self::request($customernumber, 'GetCustomerAvailableTools');
 
         // Cache.
-        self::set_cache('help', $resultdata);
+        self::set_cache('services', $resultdata);
 
         return $resultdata;
     }
