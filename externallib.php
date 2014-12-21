@@ -400,6 +400,8 @@ class block_mhaairs_gradebookservice_external extends external_api {
      *
      */
     protected static function decode_grades($grades, $itemdetails, $badchars = ";'-") {
+        global $DB;
+
         $grades = json_decode(urldecode($grades), true);
         if (($grades != "null") && ($grades != null)) {
             if (is_array($grades)) {

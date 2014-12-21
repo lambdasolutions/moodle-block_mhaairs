@@ -45,7 +45,8 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
     protected $guest;
     protected $teacher;
     protected $assistant;
-    protected $student;
+    protected $student1;
+    protected $student2;
 
     /**
      * Test set up.
@@ -86,10 +87,15 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
         $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['teacher']);
         $this->assistant = $user;
 
-        // Student.
-        $user = $this->getDataGenerator()->create_user(array('username' => 'student'));
+        // Student1.
+        $user = $this->getDataGenerator()->create_user(array('username' => 'student1'));
         $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['student']);
-        $this->student = $user;
+        $this->student1 = $user;
+
+        // Student2.
+        $user = $this->getDataGenerator()->create_user(array('username' => 'student2'));
+        $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['student']);
+        $this->student2 = $user;
 
         // Guest.
         $user = $DB->get_record('user', array('username' => 'guest'));
@@ -305,8 +311,32 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
             if (!empty($case->hidden)) {
                 continue;
             }
+
             $result = call_user_func_array($callback, $case->servicedata);
             $this->assertEquals(GRADE_UPDATE_OK, $result);
+
+            // Get the user id (assuming username given).
+            if ($gradeusername = $case->grade_username) {
+                $userid = $this->$gradeusername->id;
+
+                // Grade item fetch params.
+                $giparams = array(
+                    'itemtype' => $case->itemtype,
+                    'itemmodule' => $case->itemmodule,
+                    'iteminstance' => 0,
+                    'courseid' => $this->course->id,
+                    'itemnumber' => 0
+                );
+
+                $gitem = grade_item::fetch($giparams);
+                $usergrades = grade_grade::fetch_users_grades($gitem, array($userid), false);
+                if (!$usergrades) {
+                    $this->assertEquals(true, false);
+                } else {
+                    $grade = reset($usergrades);
+                    $this->assertEquals(95, $grade->rawgrade);
+                }
+            }
         }
     }
 
@@ -397,12 +427,6 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
             'iteminfo',
         );
 
-        // Grades.
-        $gradeparams = array(
-            'userid',
-            'grade',
-        );
-
         // Service params.
         $serviceparams = array(
             'source', // Source.
@@ -411,8 +435,8 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
             'itemmodule', // Item module.
             'iteminstance', // Item instance.
             'itemnumber', // Item number.
-            'grades' => null, // Grades.
-            'itemdetails' => null, // Item details.
+            'grades', // Grades.
+            'itemdetails', // Item details.
         );
 
         foreach ($cases as $case) {
@@ -427,15 +451,20 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
             $itemdetails = $itemdetails ? $itemdetails : null;
             $itemdetailsjson = urlencode(json_encode($itemdetails));
 
-            // Compile the grades.
-            $grades = array();
-            foreach ($gradeparams as $param) {
-                $caseparam = "grade_$param";
-                if (isset($case->$caseparam)) {
-                    $grades[$param] = $case->$caseparam;
+            // Compile the grades, userid and rawgrade.
+            // Assign the username to userid as is or converted according the identity type.
+            $grades = null;
+            if (!empty($case->grade_username)) {
+                $grades = array();
+
+                $gradeusername = $case->grade_username;
+                if ($case->item_identity_type == 'internal') {
+                    $grades['userid'] = $this->$gradeusername->id;
+                } else {
+                    $grades['userid'] = $gradeusername;
                 }
+                $grades['rawgrade'] = $case->grade_rawgrade;
             }
-            $grades = $grades ? $grades : null;
             $gradesjson = urlencode(json_encode($grades));
 
             // Compile the service params.
