@@ -92,9 +92,14 @@ class block_mhaairs_gradebookservice_external extends external_api {
         require_capability('moodle/user:viewdetails', $context, null, true, 'cannotviewprofile');
         $logger->log('Capability validated.');
 
-        // Decode item details and check for problems.
-        $itemdetails = self::decode_item_details($itemdetails, $grades);
-        $logger->log("Decoded itemdetails: ". var_export($itemdetails, true));
+        // Decode item details and grades.
+        $itemdetails = json_decode(urldecode($itemdetails), true);
+        $grades = json_decode(urldecode($grades), true);
+
+        // Validate item details.
+        $logger->log("Checking if any item details were sent.");
+        $itemdetails = self::validate_item_details($itemdetails, $grades);
+        $logger->log("Validated item details: ". var_export($itemdetails, true));
 
         // Get the course.
         $course = self::get_course($courseid, $itemdetails);
@@ -115,12 +120,6 @@ class block_mhaairs_gradebookservice_external extends external_api {
 
         // Can we fully create grade_item with available data if needed?
         $cancreategradeitem = self::can_create_grade_item($itemdetails);
-
-        // Decode grades and check for problems.
-        $logger->log("Preparing to check if any grades where sent.");
-        $grades = self::decode_grades($grades, $itemdetails);
-        $logger->log("Decoded grades: ". var_export($grades, true));
-
         if (!$cancreategradeitem) {
             $logger->log('We do not have enough information to create new grades.');
             $logger->log('Checking if grade item already exists.');
@@ -130,6 +129,11 @@ class block_mhaairs_gradebookservice_external extends external_api {
                 return GRADE_UPDATE_FAILED;
             }
         }
+
+        // Validate grades.
+        $logger->log("Checking if any grades were sent.");
+        $grades = self::validate_grades($grades, $itemdetails);
+        $logger->log("Validated grades: ". var_export($grades, true));
 
         // Run the update grade function which creates / updates the grade.
         $result = grade_update($source, $courseid, $itemtype, $itemmodule,
@@ -214,7 +218,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
 
     // GET GRADE.
     /**
-     * Allows external services to push grades into the course gradebook.
+     * Returns grade item info and grades.
      *
      * @param string $source
      * @param string $courseid
@@ -231,11 +235,11 @@ class block_mhaairs_gradebookservice_external extends external_api {
     public static function get_grade($source = 'mhaairs', $courseid ='courseid', $itemtype = 'mod',
                                             $itemmodule = 'assignment', $iteminstance = '0', $itemnumber = '0',
                                             $grades = null, $itemdetails = null) {
-        global $USER, $DB;
+        global $USER;
 
         // Gradebook sync must be enabled by admin in the block's site configuration.
         if (!$syncgrades = get_config('core', 'block_mhaairs_sync_gradebook')) {
-            return GRADE_UPDATE_FAILED;
+            return null;
         }
 
         // Context validation.
@@ -247,24 +251,50 @@ class block_mhaairs_gradebookservice_external extends external_api {
         // OPTIONAL but in most web service it should be present.
         require_capability('moodle/user:viewdetails', $context, null, true, 'cannotviewprofile');
 
-        // Decode item details and check for problems.
-        $itemdetails = self::decode_item_details($itemdetails, $grades);
+        // Decode item details and grades.
+        $itemdetails = json_decode(urldecode($itemdetails), true);
+        $grades = json_decode(urldecode($grades), true);
+
+        // Validate item details.
+        $itemdetails = self::validate_item_details($itemdetails, $grades);
 
         // Get the course.
         $course = self::get_course($courseid, $itemdetails);
         if ($course === false) {
             // No valid course specified.
-            return GRADE_UPDATE_FAILED;
+            return null;
         }
         $courseid = $course->id;
 
         // Check if grade item exists the same way grade_update does.
-        if (!self::get_grade_item($courseid, $itemtype, $itemmodule, $iteminstance, $itemnumber)) {
-            $logger->log('No grade item available. Returning '. GRADE_UPDATE_FAILED. '.');
-            return GRADE_UPDATE_FAILED;
+        if (!$gitem = self::get_grade_item($courseid, $itemtype, $itemmodule, $iteminstance, $itemnumber)) {
+            return null;
         }
 
-        return null;
+        $result = array();
+        $result['courseid'] = $courseid;
+        $result['categoryid'] = $gitem->item_category;
+        $result['itemname'] = $gitem->itemname;
+        $result['itemtype'] = $gitem->itemtype;
+        $result['idnumber'] = $gitem->idnumber;
+        $result['gradetype'] = $gitem->gradetype;
+        $result['grademax'] = $gitem->grademax;
+        $result['grades'] = array();
+
+        // Look up a specific grade.
+        if ($grades = self::validate_grades($grades, $itemdetails)) {
+            $gradeparams = (array) reset($grades);
+            $gradeparams['itemid'] = $gitem->id;
+            if (!$grade = grade_grade::fetch($gradeparams)) {
+                return null;
+            }
+            $result['grades'][] = array(
+                'userid' => $grade->userid,
+                'grade' => $grade->rawgrade,
+            );
+        }
+
+        return $result;
     }
 
     /**
@@ -284,29 +314,18 @@ class block_mhaairs_gradebookservice_external extends external_api {
     public static function get_grade_returns() {
         return new external_single_structure(
             array(
-                'items'  => new external_multiple_structure(
+                'courseid' => new external_value(PARAM_INT, 'Course id'),
+                'categoryid' => new external_value(PARAM_INT, 'Grade category id'),
+                'itemname' => new external_value(PARAM_RAW, 'Item name'),
+                'itemtype' => new external_value(PARAM_RAW, 'Item type'),
+                'idnumber' => new external_value(PARAM_INT, 'Course id'),
+                'gradetype' => new external_value(PARAM_INT, 'Grade type'),
+                'grademax' => new external_value(PARAM_FLOAT, 'Maximum grade'),
+                'grades' => new external_multiple_structure(
                     new external_single_structure(
                         array(
-                            'activityid' => new external_value(
-                                PARAM_ALPHANUM, 'The ID of the activity or "course" for the course grade item'),
-                            'itemnumber'  => new external_value(PARAM_INT, 'Will be 0 unless the module has multiple grades'),
-                            'scaleid' => new external_value(PARAM_INT, 'The ID of the custom scale or 0'),
-                            'name' => new external_value(PARAM_RAW, 'The module name'),
-                            'grademin' => new external_value(PARAM_FLOAT, 'Minimum grade'),
-                            'grademax' => new external_value(PARAM_FLOAT, 'Maximum grade'),
-                            'gradepass' => new external_value(PARAM_FLOAT, 'The passing grade threshold'),
-                            'locked' => new external_value(PARAM_INT, '0 means not locked, > 1 is a date to lock until'),
-                            'hidden' => new external_value(PARAM_INT, '0 means not hidden, > 1 is a date to hide until'),
-                            'grades' => new external_multiple_structure(
-                                new external_single_structure(
-                                    array(
-                                        'userid' => new external_value(
-                                            PARAM_INT, 'Student ID'),
-                                        'grade' => new external_value(
-                                            PARAM_FLOAT, 'Student grade'),
-                                    )
-                                )
-                            ),
+                            'userid' => new external_value(PARAM_INT, 'Student ID'),
+                            'grade' => new external_value(PARAM_FLOAT, 'Student grade'),
                         )
                     )
                 ),
@@ -373,10 +392,14 @@ class block_mhaairs_gradebookservice_external extends external_api {
     }
 
     /**
+     * Validates item details data.
      *
+     * @param array $itemdetails An array of item details.
+     * @param array $grades An array of userid - grade pairs.
+     * @param string $badchar
+     * @return array|null
      */
-    protected static function decode_item_details($itemdetails, $grades, $badchars = ";'-") {
-        $itemdetails = json_decode(urldecode($itemdetails), true);
+    protected static function validate_item_details($itemdetails, $grades, $badchars = ";'-") {
         if ($itemdetails != "null" && $itemdetails != null) {
             // Check type of each parameter.
             self::check_valid($itemdetails, 'categoryid', 'string', $badchars);
@@ -397,12 +420,16 @@ class block_mhaairs_gradebookservice_external extends external_api {
     }
 
     /**
+     * Validates grades data.
      *
+     * @param array $grades An array of userid - grade pairs.
+     * @param array $itemdetails An array of item details.
+     * @param string $badchar
+     * @return array|null
      */
-    protected static function decode_grades($grades, $itemdetails, $badchars = ";'-") {
+    protected static function validate_grades($grades, $itemdetails, $badchars = ";'-") {
         global $DB;
 
-        $grades = json_decode(urldecode($grades), true);
         if (($grades != "null") && ($grades != null)) {
             if (is_array($grades)) {
                 self::check_valid($grades, 'userid'  , 'string', $badchars);

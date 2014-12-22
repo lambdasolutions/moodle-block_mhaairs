@@ -27,6 +27,7 @@ defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once("$CFG->dirroot/blocks/mhaairs/externallib.php");
+require_once("$CFG->libdir/gradelib.php");
 
 /**
  * PHPUnit mhaairs gradebook service test case.
@@ -115,30 +116,12 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
         $this->set_user('admin');
 
         // Item details.
-        $itemdetails = array(
-            'categoryid' => '',
-            'courseid' => $this->course->id,
-            'identity_type' => '',
-            'itemname' => 'testassignment',
-            'itemtype' => 'mod',
-            'idnumber' => 0,
-            'gradetype' => GRADE_TYPE_VALUE,
-            'grademax' => 100,
-            'iteminfo' => '',
-        );
+        $itemdetails = $this->get_test_item_details(0);
         $itemdetailsjson = urlencode(json_encode($itemdetails));
 
         // Service params.
-        $serviceparams = array(
-            'source' => 'mod/assignment', // Source.
-            'courseid' => $this->course->id, // Course id.
-            'itemtype' => 'mod', // Item type.
-            'itemmodule' => 'assignment', // Item module.
-            'iteminstance' => '0', // Item instance.
-            'itemnumber' => '0', // Item number.
-            'grades' => null, // Grades.
-            'itemdetails' => $itemdetailsjson, // Item details.
-        );
+        $serviceparams = $this->get_test_item_params(0);
+        $serviceparams['itemdetails'] = $itemdetailsjson;
 
         // No sync.
         $DB->set_field('config', 'value', 0, array('name' => 'block_mhaairs_sync_gradebook'));
@@ -158,35 +141,17 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
         $callback = 'block_mhaairs_gradebookservice_external::gradebookservice';
         $this->set_user('admin');
 
-        // There is only one course in this test,
-        // So get an id that is different from the course's.
-        $courseid = $this->course->id + 1;
-
         // Item details.
-        $itemdetails = array(
-            'categoryid' => '',
-            'courseid' => $this->course->id,
-            'identity_type' => '',
-            'itemname' => 'testassignment',
-            'itemtype' => 'mod',
-            'idnumber' => 0,
-            'gradetype' => GRADE_TYPE_VALUE,
-            'grademax' => 100,
-            'iteminfo' => '',
-        );
+        $itemdetails = $this->get_test_item_details(0);
         $itemdetailsjson = urlencode(json_encode($itemdetails));
 
         // Service params.
-        $serviceparams = array(
-            'source' => 'mod/assignment', // Source.
-            'courseid' => $courseid, // Course id.
-            'itemtype' => 'mod', // Item type.
-            'itemmodule' => 'assignment', // Item module.
-            'iteminstance' => '0', // Item instance.
-            'itemnumber' => '0', // Item number.
-            'grades' => null, // Grades.
-            'itemdetails' => $itemdetailsjson, // Item details.
-        );
+        $serviceparams = $this->get_test_item_params(0);
+        $serviceparams['itemdetails'] = $itemdetailsjson;
+
+        // There is only one course in this test,
+        // So get an id that is different from the course's.
+        $serviceparams['courseid'] = $this->course->id + 1;
 
         $result = call_user_func_array($callback, $serviceparams);
         $this->assertEquals(GRADE_UPDATE_FAILED, $result);
@@ -205,30 +170,12 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
         $this->set_user('admin');
 
         // Item details.
-        $itemdetails = array(
-            'categoryid' => '',
-            'courseid' => '',
-            'identity_type' => '',
-            'itemname' => 'testassignment',
-            'itemtype' => 'mod',
-            'idnumber' => 0,
-            'gradetype' => GRADE_TYPE_VALUE,
-            'grademax' => 100,
-            'iteminfo' => '',
-        );
+        $itemdetails = $this->get_test_item_details(0);
         $itemdetailsjson = urlencode(json_encode($itemdetails));
 
         // Service params.
-        $serviceparams = array(
-            'source' => 'mod/assignment', // Source.
-            'courseid' => $this->course->id, // Course id.
-            'itemtype' => 'mod', // Item type.
-            'itemmodule' => 'assignment', // Item module.
-            'iteminstance' => '0', // Item instance.
-            'itemnumber' => '0', // Item number.
-            'grades' => null, // Grades.
-            'itemdetails' => $itemdetailsjson, // Item details.
-        );
+        $serviceparams = $this->get_test_item_params(0);
+        $serviceparams['itemdetails'] = $itemdetailsjson;
 
         // Grade item fetch params.
         $giparams = array(
@@ -364,6 +311,44 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
     }
 
     /**
+     * Tests the gradebookservice get grade with cases that should
+     * result in success.
+     *
+     * @return void
+     */
+    public function test_get_grade_valid() {
+        global $DB;
+
+        $callback = 'block_mhaairs_gradebookservice_external::get_grade';
+        $this->set_user('admin');
+
+        // CREATE/UPDATE.
+        $cases = $this->get_update_grade_servicedata_cases('tc_get_grade_valid');
+        foreach ($cases as $case) {
+            if (!empty($case->hidden)) {
+                continue;
+            }
+
+            // Run the update grade function which creates/updates the grade.
+            $updateparams = $case->servicedata;
+            $updateparams['courseid'] = $this->course->id;
+            $updateparams['itemdetails'] = json_decode(urldecode($updateparams['itemdetails']), true);
+            $updateparams['grades'] = json_decode(urldecode($updateparams['grades']), true);
+            if (!empty($updateparams['grades']['userid'])) {
+                if ($updateparams['itemdetails']['identity_type'] != 'internal') {
+                    $username = $updateparams['grades']['userid'];
+                    $updateparams['grades']['userid'] = $this->$username->id;
+                }
+            }
+
+            call_user_func_array('grade_update', $updateparams);
+
+            $result = call_user_func_array($callback, $case->servicedata);
+            $this->assertNotEquals(null, $result);
+        }
+    }
+
+    /**
      * Sets the user.
      *
      * @return void
@@ -473,6 +458,10 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
                 $value = isset($case->$param) ? $case->$param : '';
                 $servicedata[$param] = $value;
             }
+            if (!empty($case->courseinstance)) {
+                $thiscourse = $this->{$case->courseinstance};
+                $servicedata['courseid'] = $thiscourse->id;
+            }
             $servicedata['itemdetails'] = $itemdetailsjson;
             $servicedata['grades'] = $gradesjson;
 
@@ -481,5 +470,56 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
 
         return $cases;
     }
+
+    /**
+     *
+     * @return array
+     */
+    protected function get_test_item_details($index = -1) {
+        $items = array();
+
+        $items[] = array(
+            'categoryid' => '',
+            'courseid' => '',
+            'identity_type' => '',
+            'itemname' => 'testassignment',
+            'itemtype' => 'mod',
+            'idnumber' => 0,
+            'gradetype' => GRADE_TYPE_VALUE,
+            'grademax' => 100,
+            'iteminfo' => '',
+        );
+
+        if (array_key_exists($index, $items)) {
+            return $items[$index];
+        } else {
+            return $items;
+        }
+    }
+
+    /**
+     *
+     * @return array
+     */
+    protected function get_test_item_params($index = -1) {
+        $items = array();
+        $items[] = array(
+            'source' => 'mhaairs', // Source.
+            'courseid' => $this->course->id, // Course id.
+            'itemtype' => 'mod', // Item type.
+            'itemmodule' => 'assignment', // Item module.
+            'iteminstance' => '0', // Item instance.
+            'itemnumber' => '0', // Item number.
+            'grades' => null, // Grades.
+            'itemdetails' => null, // Item details.
+        );
+
+        if (array_key_exists($index, $items)) {
+            return $items[$index];
+        } else {
+            return $items;
+        }
+    }
+
 
 }
