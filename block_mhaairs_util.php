@@ -533,7 +533,7 @@ class MHLog {
      */
     private function __construct() {
         $this->filepath = null;
-        $this->logenabled = !empty(get_config('core', 'block_mhaairs_gradelog'));
+        $this->logenabled = get_config('core', 'block_mhaairs_gradelog') ? true : false;
         $dir = $this->dirpath;
         if ($dir === null) {
             $mdata = get_config('core', 'dataroot');
