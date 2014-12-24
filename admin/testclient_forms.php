@@ -51,7 +51,7 @@ class block_mhaairs_service_form extends moodleform {
 
         // Authentication.
         $mform->addElement('header', 'mhauthenticationhdr', 'Authentication');
-        $mform->setExpanded('mhauthenticationhdr');
+        $this->set_expanded('mhauthenticationhdr');
         $this->definition_auth();
 
         // Service specific definition.
@@ -135,6 +135,14 @@ class block_mhaairs_service_form extends moodleform {
         return (array) $data;
     }
 
+    protected function set_expanded($element) {
+        $mform = $this->_form;
+
+        if (method_exists($mform, 'setExpanded')) {
+            $mform->setExpanded($element);
+        }
+    }
+
     public function get_params() {
         if (!$data = $this->get_data()) {
             return null;
@@ -154,15 +162,15 @@ class block_mhaairs_update_grade_form extends block_mhaairs_service_form {
         $mform = $this->_form;
 
         $mform->addElement('header', 'mhdefserviceparamshdr', 'Service params');
-        $mform->setExpanded('mhdefserviceparamshdr');
+        $this->set_expanded('mhdefserviceparamshdr');
         $this->definition_service_params();
 
         $mform->addElement('header', 'mhdefitemdetailshdr', 'Item details');
-        $mform->setExpanded('mhdefitemdetailshdr');
+        $this->set_expanded('mhdefitemdetailshdr');
         $this->definition_item_details();
 
         $mform->addElement('header', 'mhdefgradeshdr', 'Grades');
-        $mform->setExpanded('mhdefgradeshdr');
+        $this->set_expanded('mhdefgradeshdr');
         $this->definition_grades();
     }
 
@@ -296,15 +304,15 @@ class block_mhaairs_get_grade_form extends block_mhaairs_service_form {
         $mform = $this->_form;
 
         $mform->addElement('header', 'mhdefserviceparamshdr', 'Service params');
-        $mform->setExpanded('mhdefserviceparamshdr');
+        $this->set_expanded('mhdefserviceparamshdr');
         $this->definition_service_params();
 
         $mform->addElement('header', 'mhdefitemdetailshdr', 'Item details');
-        $mform->setExpanded('mhdefitemdetailshdr');
+        $this->set_expanded('mhdefitemdetailshdr');
         $this->definition_item_details();
 
         $mform->addElement('header', 'mhdefgradeshdr', 'Grades');
-        $mform->setExpanded('mhdefgradeshdr');
+        $this->set_expanded('mhdefgradeshdr');
         $this->definition_grades();
     }
 
