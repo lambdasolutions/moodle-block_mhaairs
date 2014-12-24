@@ -243,7 +243,7 @@ class block_mhaairs_update_grade_form extends block_mhaairs_service_form {
 
         $fields = array(
             'userid' => array('text', 'User id', ''),
-            'grade' => array('text', 'Grade', ''),
+            'rawgrade' => array('text', 'Grade', ''),
         );
 
         // Enable data set.

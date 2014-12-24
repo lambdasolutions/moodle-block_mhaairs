@@ -81,6 +81,7 @@ $services = array(
                 'functions' => array (
                     'block_mhaairs_gradebookservice',
                     'block_mhaairs_update_grade',
+                    'block_mhaairs_get_grade',
                 ),
                 'shortname' => 'mhaairs_gradebook',
                 'restrictedusers'   => 0,

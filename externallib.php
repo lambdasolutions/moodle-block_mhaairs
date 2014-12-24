@@ -114,9 +114,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
 
         // Handle the category.
         $logger->log("Preparing to check and create grade category if needed.");
-        if (!empty($itemdetails['categoryid']) && $itemdetails['categoryid'] != 'null') {
-            self::handle_grade_category($itemdetails, $courseid);
-        }
+        $itemdetails['categoryid'] = self::handle_grade_category($itemdetails, $courseid);
 
         // Can we fully create grade_item with available data if needed?
         $cancreategradeitem = self::can_create_grade_item($itemdetails);
@@ -237,9 +235,11 @@ class block_mhaairs_gradebookservice_external extends external_api {
                                             $grades = null, $itemdetails = null) {
         global $USER;
 
+        $result = array();
+
         // Gradebook sync must be enabled by admin in the block's site configuration.
         if (!$syncgrades = get_config('core', 'block_mhaairs_sync_gradebook')) {
-            return null;
+            return $result;
         }
 
         // Context validation.
@@ -262,33 +262,35 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $course = self::get_course($courseid, $itemdetails);
         if ($course === false) {
             // No valid course specified.
-            return null;
+            return $result;
         }
         $courseid = $course->id;
 
-        // Check if grade item exists the same way grade_update does.
+        // Get the grade item.
         if (!$gitem = self::get_grade_item($courseid, $itemtype, $itemmodule, $iteminstance, $itemnumber)) {
-            return null;
+            return $result;
         }
 
-        $result = array();
-        $result['courseid'] = $courseid;
-        $result['categoryid'] = $gitem->item_category;
-        $result['itemname'] = $gitem->itemname;
-        $result['itemtype'] = $gitem->itemtype;
-        $result['idnumber'] = $gitem->idnumber;
-        $result['gradetype'] = $gitem->gradetype;
-        $result['grademax'] = $gitem->grademax;
-        $result['grades'] = array();
+        // Prepare result.
+        $result['item'] = array(
+            'courseid' => $courseid,
+            'categoryid' => $gitem->item_category,
+            'itemname' => $gitem->itemname,
+            'itemtype' => $gitem->itemtype,
+            'idnumber' => $gitem->idnumber,
+            'gradetype' => $gitem->gradetype,
+            'grademax' => $gitem->grademax,
+        );
 
         // Look up a specific grade.
         if ($grades = self::validate_grades($grades, $itemdetails)) {
+
             $gradeparams = (array) reset($grades);
             $gradeparams['itemid'] = $gitem->id;
             if (!$grade = grade_grade::fetch($gradeparams)) {
-                return null;
+                return array();
             }
-            $result['grades'][] = array(
+            $result['grade'] = array(
                 'userid' => $grade->userid,
                 'grade' => $grade->rawgrade,
             );
@@ -314,20 +316,22 @@ class block_mhaairs_gradebookservice_external extends external_api {
     public static function get_grade_returns() {
         return new external_single_structure(
             array(
-                'courseid' => new external_value(PARAM_INT, 'Course id'),
-                'categoryid' => new external_value(PARAM_INT, 'Grade category id'),
-                'itemname' => new external_value(PARAM_RAW, 'Item name'),
-                'itemtype' => new external_value(PARAM_RAW, 'Item type'),
-                'idnumber' => new external_value(PARAM_INT, 'Course id'),
-                'gradetype' => new external_value(PARAM_INT, 'Grade type'),
-                'grademax' => new external_value(PARAM_FLOAT, 'Maximum grade'),
-                'grades' => new external_multiple_structure(
-                    new external_single_structure(
-                        array(
-                            'userid' => new external_value(PARAM_INT, 'Student ID'),
-                            'grade' => new external_value(PARAM_FLOAT, 'Student grade'),
-                        )
-                    )
+                'item' => new external_single_structure(
+                    array(
+                        'courseid' => new external_value(PARAM_INT, 'Course id'),
+                        'categoryid' => new external_value(PARAM_INT, 'Grade category id'),
+                        'itemname' => new external_value(PARAM_RAW, 'Item name'),
+                        'itemtype' => new external_value(PARAM_RAW, 'Item type'),
+                        'idnumber' => new external_value(PARAM_INT, 'Course id'),
+                        'gradetype' => new external_value(PARAM_INT, 'Grade type'),
+                        'grademax' => new external_value(PARAM_FLOAT, 'Maximum grade'),
+                    ), 'An array of items associated with the grade item', VALUE_OPTIONAL
+                ),
+                'grade' => new external_single_structure(
+                    array(
+                        'userid' => new external_value(PARAM_INT, 'Student ID'),
+                        'grade' => new external_value(PARAM_FLOAT, 'Student grade'),
+                    ), 'An array of grades associated with the grade item', VALUE_OPTIONAL
                 ),
             )
         );
@@ -449,28 +453,35 @@ class block_mhaairs_gradebookservice_external extends external_api {
     }
 
     /**
-     * Adds the id of the target catgory to the item details.
+     * Returns the id of the target category.
      * If the category does not exists it is created.
      * If the category exists any duplicates are deleted (using the locks).
      *
      * @param array $itemdetails
      * @param int $courseid
-     * @return void
+     * @return int|null
      */
-    protected static function handle_grade_category(&$itemdetails, $courseid) {
+    protected static function handle_grade_category($itemdetails, $courseid) {
         global $CFG;
+
+        if (empty($itemdetails['categoryid']) or $itemdetails['categoryid'] == 'null') {
+            return null;
+        }
 
         require_once($CFG->dirroot.'/blocks/mhaairs/lib/lock/abstractlock.php');
 
         $instance = new block_mhaairs_locinst();
 
         // We have to be carefull about MDL-37055 and make sure grade categories and grade items are in order.
-        $category = null;
+        $categoryid = null;
 
         // Fetch all grade category items that match teh target grade category by fullname.
         // If we have more than one then we need to delete the duplicates.
-        $categories = grade_category::fetch_all(array('fullname' => $itemdetails['categoryid'],
-                                                      'courseid' => $courseid));
+        $fetchparams = array(
+            'fullname' => $itemdetails['categoryid'],
+            'courseid' => $courseid
+        );
+        $categories = grade_category::fetch_all($fetchparams);
         // If the category exists we use it.
         if (!empty($categories)) {
             // The first is our target category.
@@ -494,22 +505,27 @@ class block_mhaairs_gradebookservice_external extends external_api {
         }
 
         // If the category does not exist we create it.
-        if ($category === null) {
+        if ($categoryid === null) {
             $gradeaggregation = get_config('core', 'grade_aggregation');
             if ($gradeaggregation === false) {
                 $gradeaggregation = GRADE_AGGREGATE_WEIGHTED_MEAN2;
             }
             // Parent category is automatically added(created) during insert.
-            $category = new grade_category(array('fullname'    => $itemdetails['categoryid'],
-                                                 'courseid'    => $courseid,
-                                                 'hidden'      => false,
-                                                 'aggregation' => $gradeaggregation,
-                                            ), false);
-            $category->insert();
+            $catparams = array(
+                'fullname' => $itemdetails['categoryid'],
+                'courseid' => $courseid,
+                'hidden' => false,
+                'aggregation' => $gradeaggregation,
+            );
+            $category = new grade_category($catparams, false);
+            $categoryid = $category->insert();
         }
 
-        // Use the category ID we retrieved.
-        $itemdetails['categoryid'] = $category->id;
+        if ($categoryid) {
+            return $categoryid;
+        } else {
+            return null;
+        }
     }
 
     /**
@@ -610,12 +626,20 @@ class block_mhaairs_gradebookservice_external extends external_api {
     private static function get_grade_item($courseid, $itemtype, $itemmodule = null, $iteminstance = null, $itemnumber = null) {
         $gradeiteminstance = null;
         if ($itemtype == 'course') {
-            $gradeiteminstance = grade_item::fetch(array('courseid' => $courseid, 'itemtype' => $itemtype));
+            $fetchparams = array(
+                'courseid' => $courseid,
+                'itemtype' => $itemtype,
+            );
         } else {
-            $gradeiteminstance = grade_item::fetch(
-                array('courseid' => $courseid, 'itemtype' => $itemtype,
-                    'itemmodule' => $itemmodule, 'iteminstance' => $iteminstance, 'itemnumber' => $itemnumber));
+            $fetchparams = array(
+                'courseid' => $courseid,
+                'itemtype' => $itemtype,
+                'itemmodule' => $itemmodule,
+                'iteminstance' => $iteminstance,
+                'itemnumber' => $itemnumber
+            );
         }
+        $gradeiteminstance = grade_item::fetch($fetchparams);
         return $gradeiteminstance;
     }
 
