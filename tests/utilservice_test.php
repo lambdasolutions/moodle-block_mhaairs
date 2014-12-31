@@ -364,7 +364,7 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
         $result = call_user_func_array($callback, $serviceparams);
         $this->assertEquals(MHUserInfo::FAILURE, $result->status);
         $this->assertEquals("error: user with $uservar '$userid' not found", $result->message);
-        $this->assertEquals(null, $result->user);
+        $this->assertEquals(array(), $result->user);
     }
 
     /**

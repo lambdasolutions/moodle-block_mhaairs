@@ -368,7 +368,8 @@ class MHUtil {
         // We have token user id and we can try to fetch the user info.
         try {
             // Get the user.
-            if (!$user = $DB->get_record('user', array($uservar => $tokenuserid))) {
+            $fields = 'id,deleted,suspended,username,idnumber,firstname,lastname,email,timezone';
+            if (!$user = $DB->get_record('user', array($uservar => $tokenuserid), $fields)) {
                 $userinfo->message = "error: user with $uservar '$tokenuserid' not found";
                 return $userinfo;
             };
@@ -380,7 +381,8 @@ class MHUtil {
 
             // Get the user courses.
             $userid = $user->id;
-            $courses = enrol_get_users_courses($userid, true);
+            $fields = 'id,category,fullname,shortname,idnumber,visible';
+            $courses = enrol_get_users_courses($userid, true, $fields);
 
             // Get equivalent roles to Tegrity student role.
             list($intype, $rparams) = $DB->get_in_or_equal(array('student'));
@@ -456,6 +458,7 @@ class MHUserInfo {
 
     public function __construct($status) {
         $this->status = $status;
+        $this->user = array();
         $this->courses = array();
     }
 
@@ -475,9 +478,6 @@ class MHUserInfo {
 
     public function set_user($user) {
         $this->user = $user;
-        if ($this->user) {
-            $this->user->password = null;
-        }
     }
 }
 

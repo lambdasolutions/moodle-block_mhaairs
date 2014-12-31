@@ -709,13 +709,29 @@ class block_mhaairs_utilservice_external extends external_api {
                 'status' => new external_value(PARAM_INT, 'Result status: 0|1 (SUCCESS|FAILURE).'),
                 'user' => new external_single_structure(
                     array(
-                    )
+                        'id' => new external_value(PARAM_INT, 'User id'),
+                        'deleted' => new external_value(PARAM_INT, 'Deleted'),
+                        'suspended' => new external_value(PARAM_INT, 'Suspended'),
+                        'username' => new external_value(PARAM_RAW, 'Username'),
+                        'idnumber' => new external_value(PARAM_RAW, 'Id number'),
+                        'firstname' => new external_value(PARAM_RAW, 'First name'),
+                        'lastname' => new external_value(PARAM_RAW, 'Last name'),
+                        'email' => new external_value(PARAM_RAW, 'Email'),
+                        'timezone' => new external_value(PARAM_RAW, 'Time zone'),
+                    ), 'An array of user info', VALUE_OPTIONAL
                 ),
                 'courses' => new external_multiple_structure(
                     new external_single_structure(
                         array(
+                            'id' => new external_value(PARAM_INT, 'Course id'),
+                            'category' => new external_value(PARAM_INT, 'Category id'),
+                            'fullname' => new external_value(PARAM_RAW, 'Full name'),
+                            'shortname' => new external_value(PARAM_RAW, 'Short name'),
+                            'idnumber' => new external_value(PARAM_RAW, 'Id number'),
+                            'visible' => new external_value(PARAM_INT, 'Visible'),
+                            'rolename' => new external_value(PARAM_RAW, 'User role'),
                         )
-                    )
+                    ), 'An array of courses the user is enrolled in', VALUE_OPTIONAL
                 ),
                 'message' => new external_value(PARAM_TEXT, 'Error message on failure; empty on success.'),
             )

@@ -441,3 +441,45 @@ class block_mhaairs_get_grade_form extends block_mhaairs_service_form {
  */
 class block_mhaairs_gradebookservice_form extends block_mhaairs_update_grade_form {
 }
+
+/**
+ * Block mhaairs get user info test client form.
+ */
+class block_mhaairs_get_user_info_form extends block_mhaairs_service_form {
+
+    protected function custom_definition() {
+        $mform = $this->_form;
+
+        $mform->addElement('header', 'mhdefserviceparamshdr', 'Service params');
+        $this->set_expanded('mhdefserviceparamshdr');
+        $this->definition_service_params();
+    }
+
+    protected function definition_service_params() {
+        $mform = $this->_form;
+
+        // User id.
+        $mform->addElement('text', 'serviceparams[userid]', 'User id');
+        $mform->setType('serviceparams[userid]', PARAM_TEXT);
+
+        // Identity type.
+        $mform->addElement('advcheckbox', 'serviceparams[identitytype]', 'Identity type', 'internal', null, array('', 'internal'));
+    }
+
+    public function get_params() {
+        if (!$data = $this->get_data()) {
+            return null;
+        }
+
+        $serviceparams = (object) $data->serviceparams;
+        $secret = get_config('core', 'block_mhaairs_shared_secret');
+
+        // Create the token.
+        $token = MHUtil::create_token($serviceparams->userid);
+        $encodedtoken = MHUtil::encode_token2($token, $secret);
+        $serviceparams->token = $encodedtoken;
+        unset($serviceparams->userid);
+
+        return $this->format_params($serviceparams);
+    }
+}
