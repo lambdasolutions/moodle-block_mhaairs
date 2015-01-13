@@ -123,14 +123,13 @@ if ($data = $mform->get_data()) {
     }
     $serverurl = new \moodle_url("/webservice/$protocol/$server", $requestparams);
 
-    // Now get the function parameters.
+    // Get and test the function parameters.
     $params = $mform->get_params();
-
-    // Now test the parameters, this also fixes PHP data types.
     $params = external_api::validate_parameters($functioninfo->parameters_desc, $params);
-    $fullurl = new \moodle_url($serverurl, $params);
 
     // Display the url.
+    $urlparams = array_merge($params, array('wsfunction' => $function));
+    $fullurl = new \moodle_url($serverurl, $urlparams);
     echo html_writer::tag('h3', 'URL');
     echo $OUTPUT->box_start();
     echo $fullurl->out(false);
