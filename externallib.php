@@ -481,7 +481,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
         // We have to be carefull about MDL-37055 and make sure grade categories and grade items are in order.
         $categoryid = null;
 
-        // Fetch all grade category items that match teh target grade category by fullname.
+        // Fetch all grade category items that match the target grade category by fullname.
         // If we have more than one then we need to delete the duplicates.
         $fetchparams = array(
             'fullname' => $itemdetails['categoryid'],
@@ -492,6 +492,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
         if (!empty($categories)) {
             // The first is our target category.
             $category = array_shift($categories);
+            $categoryid = $category->id;
 
             // We delete any duplicates.
             if (!empty($categories)) {
