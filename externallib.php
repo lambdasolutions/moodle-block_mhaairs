@@ -274,26 +274,30 @@ class block_mhaairs_gradebookservice_external extends external_api {
         // Prepare result.
         $result['item'] = array(
             'courseid' => $courseid,
-            'categoryid' => $gitem->item_category,
+            'categoryid' => $gitem->categoryid,
             'itemname' => $gitem->itemname,
             'itemtype' => $gitem->itemtype,
             'idnumber' => $gitem->idnumber,
             'gradetype' => $gitem->gradetype,
             'grademax' => $gitem->grademax,
+            'grades' => array(),
         );
 
         // Look up a specific grade.
         if ($grades = self::validate_grades($grades, $itemdetails)) {
-
-            $gradeparams = (array) reset($grades);
-            $gradeparams['itemid'] = $gitem->id;
-            if (!$grade = grade_grade::fetch($gradeparams)) {
-                return array();
+            if (!empty($grades['userid'])) {
+                $gradegrades = grade_grade::fetch_users_grades($gitem, array($grades['userid']), false);
+            } else {
+                $gradegrades = grade_grade::fetch_all(array('itemid' => $gitem->id));
             }
-            $result['grade'] = array(
-                'userid' => $grade->userid,
-                'grade' => $grade->rawgrade,
-            );
+            if ($gradegrades) {
+                foreach($gradegrades as $grade) {
+                    $result['grades'][] = array(
+                        'userid' => $grade->userid,
+                        'grade' => $grade->rawgrade,
+                    );
+                }
+            }
         }
 
         return $result;
@@ -327,10 +331,12 @@ class block_mhaairs_gradebookservice_external extends external_api {
                         'grademax' => new external_value(PARAM_FLOAT, 'Maximum grade'),
                     ), 'An array of items associated with the grade item', VALUE_OPTIONAL
                 ),
-                'grade' => new external_single_structure(
-                    array(
-                        'userid' => new external_value(PARAM_INT, 'Student ID'),
-                        'grade' => new external_value(PARAM_FLOAT, 'Student grade'),
+                'grades' => new external_multiple_structure(
+                    new external_single_structure(
+                        array(
+                            'userid' => new external_value(PARAM_INT, 'Student ID'),
+                            'grade' => new external_value(PARAM_FLOAT, 'Student grade'),
+                        )
                     ), 'An array of grades associated with the grade item', VALUE_OPTIONAL
                 ),
             )
