@@ -409,7 +409,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
      * @param string $badchar
      * @return array|null
      */
-    protected static function validate_item_details($itemdetails, $grades, $badchars = ";'-") {
+    protected static function validate_item_details($itemdetails, $grades, $badchars = null) {
         if ($itemdetails != "null" && $itemdetails != null) {
             // Check type of each parameter.
             self::check_valid($itemdetails, 'categoryid', 'string', $badchars);
@@ -437,7 +437,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
      * @param string $badchar
      * @return array|null
      */
-    protected static function validate_grades($grades, $itemdetails, $badchars = ";'-") {
+    protected static function validate_grades($grades, $itemdetails, $badchars = null) {
         global $DB;
 
         if (($grades != "null") && ($grades != null)) {
