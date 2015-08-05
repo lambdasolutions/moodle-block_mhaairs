@@ -42,6 +42,7 @@ require_once("$CFG->libdir/gradelib.php");
  */
 class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
     protected $course;
+    protected $roles;
     protected $bi;
     protected $guest;
     protected $teacher;
@@ -77,6 +78,7 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
 
         // Create users and enroll them in the course.
         $roles = $DB->get_records_menu('role', array(), '', 'shortname,id');
+        $this->roles = $roles;
 
         // Teacher.
         $user = $this->getDataGenerator()->create_user(array('username' => 'teacher'));
@@ -285,6 +287,71 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
                 }
             }
         }
+    }
+
+    /**
+     * Tests the gradebookservice update grade with cases that relate
+     * to the fix in CONTRIB_5853, that is, removing the ";,-" characters
+     * cleanup that was performed on categoryid, itemtype and userid.
+     *
+     * @return void
+     */
+    public function test_update_grade_item_userid_CONTRIB_5853() {
+        global $DB;
+
+        $callback = 'block_mhaairs_gradebookservice_external::update_grade';
+        $this->set_user('admin');
+
+        // Service data.
+        $servicedata = array();
+        $servicedata['source'] = 'mhaairs';
+        $servicedata['courseid'] = 'tc1';
+        $servicedata['itemtype'] = 'mod';
+        $servicedata['itemmodule'] = 'assignment';
+        $servicedata['iteminstance'] = 0;
+        $servicedata['itemnumber'] = 0;
+        $servicedata['grades'] = null;
+        $servicedata['itemdetails'] = null;
+
+        // Item details.
+        $itemdetails = array();
+        $itemdetails['categoryid'] = '';
+        $itemdetails['courseid'] = '';
+        $itemdetails['identity_type'] = '';
+        $itemdetails['itemname'] = 'assignment5853';
+        $itemdetails['itemtype'] = 'mod';
+        $itemdetails['idnumber'] = 0;
+        $itemdetails['gradetype'] = 1;
+        $itemdetails['grademax'] = 100;
+        $itemdetails['iteminfo'] = '';
+        $itemdetailsjson = urlencode(json_encode($itemdetails));
+
+        $servicedata['itemdetails'] = $itemdetailsjson;
+
+        // Grade for username student1.
+        $grades = array();
+        $grades['userid'] = 'student1';
+        $grades['rawgrade'] = 93;
+        $gradesjson = urlencode(json_encode($grades));
+
+        $servicedata['grades'] = $gradesjson;
+
+        $result = call_user_func_array($callback, $servicedata);
+        $this->assertEquals(GRADE_UPDATE_OK, $result);
+
+        // Grade for username student-1.
+        $user = $this->getDataGenerator()->create_user(array('username' => 'student-1'));
+        $this->getDataGenerator()->enrol_user($user->id, $this->course->id, $this->roles['student']);
+
+        $grades = array();
+        $grades['userid'] = 'student-1';
+        $grades['rawgrade'] = 93;
+        $gradesjson = urlencode(json_encode($grades));
+
+        $servicedata['grades'] = $gradesjson;
+
+        $result = call_user_func_array($callback, $servicedata);
+        $this->assertEquals(GRADE_UPDATE_OK, $result);
     }
 
     /**
