@@ -156,7 +156,10 @@ class block_mhaairs_connect {
         }
 
         $logmsg = $status . ": " . $description;
-        add_to_log(SITEID, 'mhaairs', "block_mhaairs_connect $endpoint", '', $logmsg);
+        // TODO
+        // There used to be add_to_log here recording the requested endpoint and log message.
+        // This should be replaced with events system as soon as we decide what should be
+        // logged.
 
         return $resultdata;
     }
