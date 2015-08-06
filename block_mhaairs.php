@@ -45,6 +45,21 @@ class block_mhaairs extends block_base {
     private $servicedata;
 
     /**
+     * Which page types this block may appear on.
+     *
+     * @return array page-type prefix => true/false.
+     */
+    public function applicable_formats() {
+        return array(
+            'all' => true,
+            'mod' => false,
+            'my' => false,
+            'admin' => false,
+            'tag' => false,
+        );
+    }
+
+    /**
      * Initializes block title as the plugin name.
      *
      * @return void
@@ -52,7 +67,6 @@ class block_mhaairs extends block_base {
     public function init() {
         $this->title = get_string('pluginname', __CLASS__);
     }
-
 
     /**
      * Initializes block title as the plugin name.
@@ -330,4 +344,5 @@ class block_mhaairs extends block_base {
         }
         return $result;
     }
+
 }
