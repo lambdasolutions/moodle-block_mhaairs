@@ -26,6 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
+require_once(dirname(__FILE__). '/lib.php');
 require_once("$CFG->dirroot/blocks/mhaairs/externallib.php");
 require_once("$CFG->libdir/gradelib.php");
 
@@ -40,70 +41,7 @@ require_once("$CFG->libdir/gradelib.php");
  * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
-    protected $course;
-    protected $roles;
-    protected $bi;
-    protected $guest;
-    protected $teacher;
-    protected $assistant;
-    protected $student1;
-    protected $student2;
-
-    /**
-     * Test set up.
-     *
-     * This is executed before running any test in this file.
-     */
-    public function setUp() {
-        global $DB, $PAGE;
-
-        $this->resetAfterTest();
-
-        // Create a course we are going to add the block to.
-        // This is Test course 1 | tc_1.
-        // Add idnumber tc1, so that we can test identity type.
-        $record = array('idnumber' => 'tc1');
-        $this->course = $this->getDataGenerator()->create_course($record);
-        $courseid = $this->course->id;
-
-        // Set the page.
-        $PAGE->set_course($this->course);
-        $contextid = $PAGE->context->id;
-
-        // Create an instance of the block in the course.
-        $generator = $this->getDataGenerator()->get_plugin_generator('block_mhaairs');
-        $record = array('parentcontextid' => $contextid, 'pagetypepattern' => '*');
-        $this->bi = $generator->create_instance($record);
-
-        // Create users and enroll them in the course.
-        $roles = $DB->get_records_menu('role', array(), '', 'shortname,id');
-        $this->roles = $roles;
-
-        // Teacher.
-        $user = $this->getDataGenerator()->create_user(array('username' => 'teacher'));
-        $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['editingteacher']);
-        $this->teacher = $user;
-
-        // Assistant.
-        $user = $this->getDataGenerator()->create_user(array('username' => 'assistant'));
-        $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['teacher']);
-        $this->assistant = $user;
-
-        // Student1.
-        $user = $this->getDataGenerator()->create_user(array('username' => 'student1'));
-        $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['student']);
-        $this->student1 = $user;
-
-        // Student2.
-        $user = $this->getDataGenerator()->create_user(array('username' => 'student2'));
-        $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['student']);
-        $this->student2 = $user;
-
-        // Guest.
-        $user = $DB->get_record('user', array('username' => 'guest'));
-        $this->guest = $user;
-    }
+class block_mhaairs_gradebookservice_testcase extends block_mhaairs_testcase {
 
     /**
      * Gradebookservice update grade should fail when sync grades is disabled
@@ -181,8 +119,8 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
 
         // Grade item fetch params.
         $giparams = array(
-            'itemtype' => 'mod',
-            'itemmodule' => 'assignment',
+            'itemtype' => 'manual',
+            'itemmodule' => 'mhaairs',
             'iteminstance' => 0,
             'courseid' => $this->course->id,
             'itemnumber' => 0
@@ -283,7 +221,7 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
                     $this->assertEquals(true, false);
                 } else {
                     $grade = reset($usergrades);
-                    $this->assertEquals(95, $grade->rawgrade);
+                    $this->assertEquals(95, $grade->finalgrade);
                 }
             }
         }
@@ -306,8 +244,8 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
         $servicedata = array();
         $servicedata['source'] = 'mhaairs';
         $servicedata['courseid'] = 'tc1';
-        $servicedata['itemtype'] = 'mod';
-        $servicedata['itemmodule'] = 'assignment';
+        $servicedata['itemtype'] = 'manual';
+        $servicedata['itemmodule'] = 'mhaairs';
         $servicedata['iteminstance'] = 0;
         $servicedata['itemnumber'] = 0;
         $servicedata['grades'] = null;
@@ -412,21 +350,6 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
 
             $result = call_user_func_array($callback, $case->servicedata);
             $this->assertNotEquals(null, $result);
-        }
-    }
-
-    /**
-     * Sets the user.
-     *
-     * @return void
-     */
-    protected function set_user($username) {
-        if ($username == 'admin') {
-            $this->setAdminUser();
-        } else if ($username == 'guest') {
-            $this->setGuestUser();
-        } else {
-            $this->setUser($this->$username);
         }
     }
 
@@ -550,7 +473,7 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
             'courseid' => '',
             'identity_type' => '',
             'itemname' => 'testassignment',
-            'itemtype' => 'mod',
+            'itemtype' => 'manual',
             'idnumber' => 0,
             'gradetype' => GRADE_TYPE_VALUE,
             'grademax' => 100,
@@ -573,8 +496,8 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
         $items[] = array(
             'source' => 'mhaairs', // Source.
             'courseid' => $this->course->id, // Course id.
-            'itemtype' => 'mod', // Item type.
-            'itemmodule' => 'assignment', // Item module.
+            'itemtype' => 'manual', // Item type.
+            'itemmodule' => 'mhaairs', // Item module.
             'iteminstance' => '0', // Item instance.
             'itemnumber' => '0', // Item number.
             'grades' => null, // Grades.
@@ -587,6 +510,5 @@ class block_mhaairs_gradebookservice_testcase extends advanced_testcase {
             return $items;
         }
     }
-
 
 }
