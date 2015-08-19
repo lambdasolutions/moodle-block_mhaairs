@@ -41,6 +41,9 @@ require_once("$CFG->dirroot/blocks/mhaairs/block_mhaairs_util.php");
  */
 class block_mhaairs_gradebookservice_external extends external_api {
 
+    const ITEM_DEFAULT_TYPE = 'manual';
+    const ITEM_DEFAULT_MODULE = 'mhaairs';
+
     // UPDATE GRADE.
     /**
      * Allows external services to push grades into the course gradebook.
@@ -57,9 +60,10 @@ class block_mhaairs_gradebookservice_external extends external_api {
      * @throws invalid_parameter_exception
      * @throws moodle_exception
      */
-    public static function update_grade($source = 'mhaairs', $courseid ='courseid', $itemtype = 'mod',
-                                            $itemmodule = 'assignment', $iteminstance = '0', $itemnumber = '0',
-                                            $grades = null, $itemdetails = null) {
+    public static function update_grade($source = 'mhaairs', $courseid ='',
+                            $itemtype = self::ITEM_DEFAULT_TYPE, $itemmodule = self::ITEM_DEFAULT_MODULE,
+                            $iteminstance = '0', $itemnumber = '0',
+                            $grades = null, $itemdetails = null) {
         global $USER, $DB;
 
         $logger = MHLog::instance();
@@ -102,7 +106,8 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $logger->log("Validated item details: ". var_export($itemdetails, true));
 
         // Get the course.
-        $course = self::get_course($courseid, $itemdetails);
+        $idtype = self::get_details_itentity_type($itemdetails);
+        $course = self::get_course($courseid, $idtype);
         if ($course === false) {
             // No valid course specified.
             $logger->log("Course id received was not correct. courseid = {$courseid}.");
@@ -112,20 +117,39 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $courseid = $course->id;
         $logger->log('Course validated.');
 
-        // Handle the category.
+        // Create a grade category if needed.
         $logger->log("Preparing to check and create grade category if needed.");
-        $itemdetails['categoryid'] = self::handle_grade_category($itemdetails, $courseid);
+        $catname = self::get_details_category_name($itemdetails);
+        $category = self::get_grade_category($catname, $courseid);
 
-        // Can we fully create grade_item with available data if needed?
-        $cancreategradeitem = self::can_create_grade_item($itemdetails);
-        if (!$cancreategradeitem) {
-            $logger->log('We do not have enough information to create new grades.');
-            $logger->log('Checking if grade item already exists.');
-            // Check if grade item exists the same way grade_update does.
-            if (!self::get_grade_item($courseid, $itemtype, $itemmodule, $iteminstance, $itemnumber)) {
+        // Create/update the grade item if needed.
+        $logger->log('Creating/updating grade item.');
+        $gitem = self::get_grade_item(
+            $courseid,
+            self::ITEM_DEFAULT_TYPE,
+            self::ITEM_DEFAULT_MODULE,
+            $iteminstance,
+            $itemnumber,
+            $itemdetails,
+            $category,
+            $source
+        );
+
+        $deleterequested = self::get_details_deleted($itemdetails);
+
+        if (!$gitem) {
+            if (!$deleterequested) {
                 $logger->log('No grade item available. Returning '. GRADE_UPDATE_FAILED. '.');
                 return GRADE_UPDATE_FAILED;
+            } else {
+                $logger->log('Grade item deleted. Returning '. GRADE_UPDATE_OK. '.');
+                return GRADE_UPDATE_OK;
             }
+        }
+
+        if ($gitem and $deleterequested) {
+            $logger->log('Failed to deleted grade item. Returning '. GRADE_UPDATE_FAILED. '.');
+            return GRADE_UPDATE_FAILED;
         }
 
         // Validate grades.
@@ -133,30 +157,22 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $grades = self::validate_grades($grades, $itemdetails);
         $logger->log("Validated grades: ". var_export($grades, true));
 
-        // Run the update grade function which creates / updates the grade.
-        $result = grade_update($source, $courseid, $itemtype, $itemmodule,
-                               $iteminstance, $itemnumber, $grades, $itemdetails);
+        // Update the user grades.
+        if ($grades) {
+            $logger->log("Updating user grades");
 
-        $logger->log('Executed grade_update API. Returned result is '.$result);
-        if (!empty($itemdetails['categoryid']) && ($itemdetails['categoryid'] != 'null')) {
-            // Optional.
-            try {
-                $gradeitem = new grade_item(array('idnumber' => $itemdetails['idnumber'], 'courseid' => $courseid));
-                if (!empty($gradeitem->id)) {
-                    // Change the category of the Grade we just updated/created.
-                    $gradeitem->categoryid = (int)$itemdetails['categoryid'];
-                    $gradeitem->update();
-                    $logger->log("Changed category of a grade we just updated or created {$gradeitem->id}.");
-                }
-            } catch (Exception $e) {
-                // Silence the exception.
-                $logdata = 'Failed to change category of a grade we just updated or created.';
-                $logdata .= 'idnumber = '. $itemdetails['idnumber'];
-                $logger->log($logdata);
+            $userid = $grades['userid'];
+            $grade = $grades['rawgrade'];
+
+            if (!$gitem->update_final_grade($userid, $grade, $source)) {
+                $logger->log("Failed to update grade $grade for user $userid. Returning ". GRADE_UPDATE_FAILED. '.');
+                return GRADE_UPDATE_FAILED;
             }
+
         }
 
-        return $result;
+        $logger->log('Grade update completed. Returned result is '. GRADE_UPDATE_OK);
+        return GRADE_UPDATE_OK;
     }
 
     /**
@@ -168,21 +184,21 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $params = array();
 
         // Source.
-        $desc = 'string $source source of the grade such as "mod/assignment"';
-        $params['source'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'mod/assignment');
+        $desc = 'string $source source of the grade such as "mhaairs"';
+        $params['source'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'mhaairs');
 
         // Courseid.
         $desc = 'string $courseid id of course';
         $params['courseid'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'NULL');
 
         // Item type.
-        $desc = 'string $itemtype type of grade item - mod, block';
-        $params['itemtype'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'mod');
+        $desc = 'string $itemtype type of grade item - mod, block, manual';
+        $params['itemtype'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, self::ITEM_DEFAULT_TYPE);
 
         // Item module.
         $desc = 'string $itemmodule more specific then $itemtype - assignment,'.
-                ' forum, etc.; maybe NULL for some item types';
-        $params['itemmodule'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, 'assignment');
+                ' forum, etc.; maybe NULL for some item types or anything for manual.';
+        $params['itemmodule'] = new external_value(PARAM_TEXT, $desc, VALUE_DEFAULT, self::ITEM_DEFAULT_MODULE);
 
         // Item instance.
         $desc = 'ID of the item module';
@@ -230,9 +246,10 @@ class block_mhaairs_gradebookservice_external extends external_api {
      * @throws invalid_parameter_exception
      * @throws moodle_exception
      */
-    public static function get_grade($source = 'mhaairs', $courseid ='courseid', $itemtype = 'mod',
-                                            $itemmodule = 'assignment', $iteminstance = '0', $itemnumber = '0',
-                                            $grades = null, $itemdetails = null) {
+    public static function get_grade($source = 'mhaairs', $courseid ='',
+                            $itemtype = self::ITEM_DEFAULT_TYPE, $itemmodule = self::ITEM_DEFAULT_MODULE,
+                            $iteminstance = '0', $itemnumber = '0',
+                            $grades = null, $itemdetails = null) {
         global $USER;
 
         $result = array();
@@ -259,7 +276,8 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $itemdetails = self::validate_item_details($itemdetails, $grades);
 
         // Get the course.
-        $course = self::get_course($courseid, $itemdetails);
+        $idtype = self::get_details_itentity_type($itemdetails);
+        $course = self::get_course($courseid, $idtype);
         if ($course === false) {
             // No valid course specified.
             return $result;
@@ -267,7 +285,14 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $courseid = $course->id;
 
         // Get the grade item.
-        if (!$gitem = self::get_grade_item($courseid, $itemtype, $itemmodule, $iteminstance, $itemnumber)) {
+        $gitem = self::get_grade_item(
+            $courseid,
+            self::ITEM_DEFAULT_TYPE,
+            self::ITEM_DEFAULT_MODULE,
+            $iteminstance,
+            $itemnumber
+        );
+        if (!$gitem) {
             return $result;
         }
 
@@ -294,7 +319,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
                 foreach($gradegrades as $grade) {
                     $result['grades'][] = array(
                         'userid' => $grade->userid,
-                        'grade' => $grade->rawgrade,
+                        'grade' => $grade->finalgrade,
                     );
                 }
             }
@@ -352,9 +377,10 @@ class block_mhaairs_gradebookservice_external extends external_api {
      * @throws invalid_parameter_exception
      * @throws moodle_exception
      */
-    public static function gradebookservice($source = 'mod/assignment', $courseid ='courseid', $itemtype = 'mod',
-                                            $itemmodule = 'assignment', $iteminstance = '0', $itemnumber = '0',
-                                            $grades = null, $itemdetails = null) {
+    public static function gradebookservice($source = 'mhaairs', $courseid ='',
+                            $itemtype = self::ITEM_DEFAULT_TYPE, $itemmodule = self::ITEM_DEFAULT_MODULE,
+                            $iteminstance = '0', $itemnumber = '0',
+                            $grades = null, $itemdetails = null) {
         return self::update_grade(
             $source,
             $courseid,
@@ -390,9 +416,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
      *
      */
     protected static function can_create_grade_item($itemdetails) {
-        $fields = array('courseid', 'categoryid', 'itemname',
-                        'itemtype', 'idnumber', 'gradetype',
-                        'grademax', 'iteminfo');
+        $fields = array('itemname', 'idnumber', 'gradetype', 'grademax', 'iteminfo');
         foreach ($fields as $field) {
             if (!array_key_exists($field, $itemdetails)) {
                 return false;
@@ -459,43 +483,44 @@ class block_mhaairs_gradebookservice_external extends external_api {
     }
 
     /**
-     * Returns the id of the target category.
-     * If the category does not exists it is created.
+     * Returns a grade category with the specified by name.
+     * If the category does not exist it is created.
      * If the category exists any duplicates are deleted (using the locks).
+     * We have to be carefull about MDL-37055 and make sure
+     * grade categories and grade items are in order.
      *
-     * @param array $itemdetails
+     * @param string $catnam
      * @param int $courseid
-     * @return int|null
+     * @return grade_category|null
      */
-    protected static function handle_grade_category($itemdetails, $courseid) {
+    protected static function get_grade_category($catname, $courseid) {
         global $CFG;
 
-        if (empty($itemdetails['categoryid']) or $itemdetails['categoryid'] == 'null') {
+        if (!$catname) {
             return null;
         }
 
         require_once($CFG->dirroot.'/blocks/mhaairs/lib/lock/abstractlock.php');
 
-        $instance = new block_mhaairs_locinst();
+        $category = null;
 
-        // We have to be carefull about MDL-37055 and make sure grade categories and grade items are in order.
-        $categoryid = null;
+        $instance = new block_mhaairs_locinst();
 
         // Fetch all grade category items that match the target grade category by fullname.
         // If we have more than one then we need to delete the duplicates.
         $fetchparams = array(
-            'fullname' => $itemdetails['categoryid'],
+            'fullname' => $catname,
             'courseid' => $courseid
         );
         $categories = grade_category::fetch_all($fetchparams);
+
         // If the category exists we use it.
-        if (!empty($categories)) {
+        if ($categories) {
             // The first is our target category.
             $category = array_shift($categories);
-            $categoryid = $category->id;
 
             // We delete any duplicates.
-            if (!empty($categories)) {
+            if ($categories) {
                 if ($instance->lock()->locked()) {
                     // We have exclusive lock so let's do it.
                     try {
@@ -509,30 +534,26 @@ class block_mhaairs_gradebookservice_external extends external_api {
                     }
                 }
             }
-        }
 
-        // If the category does not exist we create it.
-        if ($categoryid === null) {
+        } else {
+
+            // If the category does not exist we create it.
             $gradeaggregation = get_config('core', 'grade_aggregation');
             if ($gradeaggregation === false) {
                 $gradeaggregation = GRADE_AGGREGATE_WEIGHTED_MEAN2;
             }
             // Parent category is automatically added(created) during insert.
             $catparams = array(
-                'fullname' => $itemdetails['categoryid'],
+                'fullname' => $catname,
                 'courseid' => $courseid,
                 'hidden' => false,
                 'aggregation' => $gradeaggregation,
             );
             $category = new grade_category($catparams, false);
-            $categoryid = $category->insert();
+            $category->id = $category->insert();
         }
 
-        if ($categoryid) {
-            return $categoryid;
-        } else {
-            return null;
-        }
+        return $category;
     }
 
     /**
@@ -576,7 +597,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
      * @param bool $idonly
      * @return false|stdClass
      */
-    private static function get_course($courseid, &$itemdetails = null) {
+    private static function get_course($courseid, $idtype = null) {
         global $DB;
 
         $course = false;
@@ -589,11 +610,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
         }
 
         // Do we need to look up the course only by internal id?
-        $idonly = false;
-        if (!empty($itemdetails['identity_type'])) {
-            $idonlyoptions = array('internal', 'lti');
-            $idonly = in_array($itemdetails['identity_type'], $idonlyoptions, true);
-        }
+        $idonly = $idtype ? in_array($idtype, array('internal', 'lti'), true) : false;
 
         // If courseid is numeric we search by course id.
         if (is_numeric($courseid) and $courseid > 0) {
@@ -613,41 +630,140 @@ class block_mhaairs_gradebookservice_external extends external_api {
             $course = $DB->get_record_select('course', $select, $params, '*', IGNORE_MULTIPLE);
         }
 
-        // Update course id in item details.
-        if ($course and $itemdetails) {
-            $itemsdetails['courseid'] = $course->id;
-        }
-
         return $course;
     }
 
     /**
-     * Get a grade item
+     * Returns a grade item with the specified data.
+     * If the item does not exist it is created.
+     *
      * @param  int $courseid        Course id
      * @param  string $itemtype     Item type
      * @param  string $itemmodule   Item module
      * @param  int $iteminstance    Item instance
      * @param  int $itemnumber      Item number
+     * @param  array $itemdetails   Item details
+     * @param  grade_category $category  Target grade category
      * @return grade_item           A grade_item instance
      */
-    private static function get_grade_item($courseid, $itemtype, $itemmodule = null, $iteminstance = null, $itemnumber = null) {
-        $gradeiteminstance = null;
+    private static function get_grade_item($courseid, $itemtype, $itemmodule,
+            $iteminstance = 0, $itemnumber = 0, $itemdetails = null, $category = null, $source = null) {
+
         if ($itemtype == 'course') {
-            $fetchparams = array(
+            // We are looking for the course grade item,
+            // so just return if exists.
+            $params = array(
                 'courseid' => $courseid,
                 'itemtype' => $itemtype,
             );
-        } else {
-            $fetchparams = array(
-                'courseid' => $courseid,
-                'itemtype' => $itemtype,
-                'itemmodule' => $itemmodule,
-                'iteminstance' => $iteminstance,
-                'itemnumber' => $itemnumber
-            );
+
+            return grade_item::fetch($params);
         }
-        $gradeiteminstance = grade_item::fetch($fetchparams);
-        return $gradeiteminstance;
+
+        // We are looking for an mhaairs assignment item.
+        // CONTRIB-5863 - Migrate old mod/quiz grade items to manual/mhaairs.
+        if ($itemtype == self::ITEM_DEFAULT_TYPE) {
+            // Does a mod quiz item exist for the requested iteminstance?
+            $params = array(
+                'courseid' => $courseid,
+                'itemtype' => 'mod',
+                'itemmodule' => 'quiz',
+                'iteminstance' => $iteminstance,
+                'itemnumber' => $itemnumber,
+            );
+            if ($gitem = grade_item::fetch($params)) {
+                // There is such an item but we need to ensure first that
+                // it is not an actual quiz instance in the course.
+                $quizparams = array('id' => $iteminstance, 'course' => $courseid);
+                if (!$quizexists = $DB->record_exists('quiz', $quizparams)) {
+                    // There is no such quiz instance in the course
+                    // and we can safely convert to an mhaairs item.
+                    $gitem->itemtype = $itemtype;
+                    $gitem->itemmodule = $itemmodule;
+                    $gitem->update();
+                }
+            }
+        }
+
+        // Fetch the item.
+        $params = array(
+            'courseid' => $courseid,
+            'itemtype' => $itemtype,
+            'itemmodule' => $itemmodule,
+            'iteminstance' => $iteminstance,
+            'itemnumber' => $itemnumber,
+        );
+        $gitem = grade_item::fetch($params);
+
+        if (!$gitem or $itemdetails) {
+            // We need to create/update the item.
+            $result = grade_update(
+                $source,
+                $courseid,
+                $itemtype,
+                $itemmodule,
+                $iteminstance,
+                $itemnumber,
+                null,
+                $itemdetails
+            );
+
+            if ($result != GRADE_UPDATE_OK) {
+                return null;
+            }
+
+            if (!$gitem = grade_item::fetch($params)) {
+                return null;
+            }
+        }
+
+        if ($category) {
+            // Optional.
+            try {
+                $gitem->categoryid = $category->id;
+                $gitem->update();
+            } catch (Exception $e) {
+                // Silence the exception.
+            }
+        }
+
+        return $gitem;
+    }
+
+    /**
+     * Returns the requested identity type from the item details or null if not provided.
+     *
+     * @param  array $itemdetails
+     * @return string|null
+     */
+    private static function get_details_itentity_type($itemdetails) {
+        if (!empty($itemdetails['identity_type'])) {
+            return $itemdetails['identity_type'];
+        }
+        return null;
+    }
+
+    /**
+     * Returns the requested category id from the item details or null if not provided.
+     *
+     * @param  array $itemdetails
+     * @return string|null
+     */
+    private static function get_details_category_name($itemdetails) {
+        if (!empty($itemdetails['categoryid'])) {
+            return $itemdetails['categoryid'];
+        }
+        return null;
+    }
+
+    /**
+     * Returns true if 'deleted' parameter is not empty in item details; false otherwise.
+     *
+     * @param  array $itemdetails
+     * @return bool
+     */
+    private static function get_details_deleted($itemdetails) {
+        return !empty($itemdetails['deleted']);
     }
 
 }
