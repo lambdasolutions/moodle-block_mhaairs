@@ -648,6 +648,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
      */
     private static function get_grade_item($courseid, $itemtype, $itemmodule,
             $iteminstance = 0, $itemnumber = 0, $itemdetails = null, $category = null, $source = null) {
+        global $DB;
 
         if ($itemtype == 'course') {
             // We are looking for the course grade item,
