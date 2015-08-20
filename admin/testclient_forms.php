@@ -182,8 +182,8 @@ class block_mhaairs_update_grade_form extends block_mhaairs_service_form {
         $fields = array(
             'source' => array('text', 'Source of grade', 'mhaairs'),
             'courseid' => array('text', 'Course id', ''),
-            'itemtype' => array('text', 'Item type', 'mod'),
-            'itemmodule' => array('text', 'Item module', 'assignment'),
+            'itemtype' => array('text', 'Item type', 'manual'),
+            'itemmodule' => array('text', 'Item module', 'mhaairs'),
             'iteminstance' => array('text', 'Item instance', 0),
             'itemnumber' => array('text', 'Item number', 0),
         );
@@ -216,9 +216,9 @@ class block_mhaairs_update_grade_form extends block_mhaairs_service_form {
         $fields = array(
             'categoryid' => array('text', 'Category id', ''),
             'courseid' => array('text', 'Course id', ''),
-            'identity_type' => array('select', 'Identify type', '', $identitytypes),
+            'identity_type' => array('select', 'Identity type', '', $identitytypes),
             'itemname' => array('text', 'Item name', ''),
-            'itemtype' => array('text', 'Item type', 'mod'),
+            'itemtype' => array('text', 'Item type', 'manual'),
             'idnumber' => array('text', 'Id number', 0),
             'gradetype' => array('text', 'Grade type', GRADE_TYPE_VALUE),
             'grademax' => array('text', 'Grade max', 100),
@@ -324,8 +324,8 @@ class block_mhaairs_get_grade_form extends block_mhaairs_service_form {
         $fields = array(
             'source' => array('text', 'Source of grade', 'mhaairs'),
             'courseid' => array('text', 'Course id', ''),
-            'itemtype' => array('text', 'Item type', 'mod'),
-            'itemmodule' => array('text', 'Item module', 'assignment'),
+            'itemtype' => array('text', 'Item type', 'manual'),
+            'itemmodule' => array('text', 'Item module', 'mhaairs'),
             'iteminstance' => array('text', 'Item instance', 0),
             'itemnumber' => array('text', 'Item number', 0),
         );
@@ -358,9 +358,9 @@ class block_mhaairs_get_grade_form extends block_mhaairs_service_form {
         $fields = array(
             'categoryid' => array('text', 'Category id', ''),
             'courseid' => array('text', 'Course id', ''),
-            'identity_type' => array('select', 'Identify type', '', $identitytypes),
+            'identity_type' => array('select', 'Identity type', '', $identitytypes),
             'itemname' => array('text', 'Item name', ''),
-            'itemtype' => array('text', 'Item type', 'mod'),
+            'itemtype' => array('text', 'Item type', 'manual'),
             'idnumber' => array('text', 'Id number', 0),
             'gradetype' => array('text', 'Grade type', GRADE_TYPE_VALUE),
             'grademax' => array('text', 'Grade max', 100),
