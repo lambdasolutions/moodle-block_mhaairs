@@ -316,6 +316,163 @@ class block_mhaairs_gradebookservice_testcase extends block_mhaairs_testcase {
     }
 
     /**
+     * Tests the migration of an old mhaairs (mod/quiz) grade item without grade.
+     * (CONTRIB_5863)
+     *
+     * @return void
+     */
+    public function test_grade_item_migration_via_update_no_score() {
+        global $DB;
+
+        $this->set_user('admin');
+
+        $quizitemparams = array('itemtype' => 'mod', 'itemmodule' => 'quiz');
+        $mhaairsitemparams = array('itemtype' => 'manual', 'itemmodule' => 'mhaairs');
+
+        $this->assertEquals(0, $DB->count_records('grade_items'));
+
+        $service = 'block_mhaairs_gradebookservice_external::update_grade';
+        $iteminstance = 24993;
+        $itemdetails = array(
+            'itemname' => 'mhaairs-quiz',
+            'itemtype' => 'mod',
+            'idnumber' => '0',
+        );
+        $itemdetailsjson = urlencode(json_encode($itemdetails));
+        $grades = array(
+            'userid' => 'student1',
+            'rawgrade' => 93,
+        );
+        $gradesjson = urlencode(json_encode($grades));
+
+
+        // Create a mod/quiz grade item directly.
+        $result = grade_update(
+            'mhaairs',
+            $this->course->id,
+            'mod',
+            'quiz',
+            $iteminstance,
+            0,
+            null,
+            $itemdetails
+        );
+
+        $itemcount = $DB->count_records('grade_items', $quizitemparams);
+        $this->assertEquals(1, $itemcount);
+
+        // Update item via service.
+        $servicedata = array();
+        $servicedata['source'] = 'mhaairs';
+        $servicedata['courseid'] = 'tc1';
+        $servicedata['itemtype'] = 'manual';
+        $servicedata['itemmodule'] = 'mhaairs';
+        $servicedata['iteminstance'] = $iteminstance;
+        $servicedata['itemnumber'] = 0;
+        $servicedata['grades'] = null;
+        $servicedata['itemdetails'] = $itemdetailsjson;
+
+        $result = call_user_func_array($service, $servicedata);
+
+        // No quiz items.
+        $itemcount = $DB->count_records('grade_items', $quizitemparams);
+        $this->assertEquals(0, $itemcount);
+
+        // 1 mhaairs item.
+        $itemcount = $DB->count_records('grade_items', $mhaairsitemparams);
+        $this->assertEquals(1, $itemcount);
+
+        // Update score.
+        $servicedata['grades'] = $gradesjson;
+        $result = call_user_func_array($service, $servicedata);
+        $this->assertEquals(1, $itemcount);
+
+        // Verify score updated.
+        $usergrade = $DB->get_field('grade_grades', 'finalgrade', array('userid' => $this->student1->id));
+        $this->assertEquals(93, (int) $usergrade);
+
+        // No quiz items.
+        $itemcount = $DB->count_records('grade_items', $quizitemparams);
+        $this->assertEquals(0, $itemcount);
+
+        // 1 mhaairs item.
+        $itemcount = $DB->count_records('grade_items', $mhaairsitemparams);
+        $this->assertEquals(1, $itemcount);
+    }
+
+    /**
+     * Tests the migration of an old mhaairs (mod/quiz) grade item with grade.
+     * (CONTRIB_5863)
+     *
+     * @return void
+     */
+    public function test_grade_item_migration_via_update_with_score() {
+        global $DB;
+
+        $this->set_user('admin');
+
+        $quizitemparams = array('itemtype' => 'mod', 'itemmodule' => 'quiz');
+        $mhaairsitemparams = array('itemtype' => 'manual', 'itemmodule' => 'mhaairs');
+
+        $this->assertEquals(0, $DB->count_records('grade_items'));
+
+        $service = 'block_mhaairs_gradebookservice_external::update_grade';
+        $iteminstance = 24993;
+        $itemdetails = array(
+            'itemname' => 'mhaairs-quiz',
+            'itemtype' => 'mod',
+            'idnumber' => '0',
+        );
+        $itemdetailsjson = urlencode(json_encode($itemdetails));
+        $grades = array(
+            'userid' => 'student1',
+            'rawgrade' => 93,
+        );
+        $gradesjson = urlencode(json_encode($grades));
+
+        // Create a mod/quiz grade item directly.
+        $result = grade_update(
+            'mhaairs',
+            $this->course->id,
+            'mod',
+            'quiz',
+            $iteminstance,
+            0,
+            null,
+            $itemdetails
+        );
+
+        $itemcount = $DB->count_records('grade_items', $quizitemparams);
+        $this->assertEquals(1, $itemcount);
+
+        // Update item via service.
+        $servicedata = array();
+        $servicedata['source'] = 'mhaairs';
+        $servicedata['courseid'] = 'tc1';
+        $servicedata['itemtype'] = 'manual';
+        $servicedata['itemmodule'] = 'mhaairs';
+        $servicedata['iteminstance'] = $iteminstance;
+        $servicedata['itemnumber'] = 0;
+        $servicedata['grades'] = $gradesjson;
+        $servicedata['itemdetails'] = $itemdetailsjson;
+
+        $result = call_user_func_array($service, $servicedata);
+        $this->assertEquals(GRADE_UPDATE_OK, $result);
+
+        // No quiz items.
+        $itemcount = $DB->count_records('grade_items', $quizitemparams);
+        $this->assertEquals(0, $itemcount);
+
+        // 1 mhaairs item.
+        $itemcount = $DB->count_records('grade_items', $mhaairsitemparams);
+        $this->assertEquals(1, $itemcount);
+
+        // Verify score updated.
+        $usergrade = $DB->get_field('grade_grades', 'finalgrade', array('userid' => $this->student1->id));
+        $this->assertEquals(93, (int) $usergrade);
+    }
+
+    /**
      * Tests the gradebookservice get grade with cases that should
      * result in success.
      *
