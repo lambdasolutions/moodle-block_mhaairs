@@ -316,7 +316,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
                 $gradegrades = grade_grade::fetch_all(array('itemid' => $gitem->id));
             }
             if ($gradegrades) {
-                foreach($gradegrades as $grade) {
+                foreach ($gradegrades as $grade) {
                     $result['grades'][] = array(
                         'userid' => $grade->userid,
                         'grade' => $grade->finalgrade,
