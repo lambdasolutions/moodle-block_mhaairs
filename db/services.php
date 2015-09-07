@@ -33,6 +33,7 @@ $functions = array(
                 'classpath' => 'blocks/mhaairs/externallib.php',
                 'description' => 'Runs the grade_update() function',
                 'type' => 'write',
+                'capabilities' => 'moodle/grade:manage, moodle/grade:edit',
                 'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
         ),
 
@@ -42,6 +43,7 @@ $functions = array(
                 'classpath' => 'blocks/mhaairs/externallib.php',
                 'description' => 'Creates/updates/deletes mhaairs grade item.',
                 'type' => 'write',
+                'capabilities' => 'moodle/grade:manage, moodle/grade:edit',
                 'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
         ),
 
