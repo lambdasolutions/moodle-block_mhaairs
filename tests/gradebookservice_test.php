@@ -234,7 +234,7 @@ class block_mhaairs_gradebookservice_testcase extends block_mhaairs_testcase {
      *
      * @return void
      */
-    public function test_update_grade_item_userid_CONTRIB_5853() {
+    public function test_update_grade_item_userid_with_hyphen() {
         global $DB;
 
         $callback = 'block_mhaairs_gradebookservice_external::update_grade';
@@ -344,7 +344,6 @@ class block_mhaairs_gradebookservice_testcase extends block_mhaairs_testcase {
             'rawgrade' => 93,
         );
         $gradesjson = urlencode(json_encode($grades));
-
 
         // Create a mod/quiz grade item directly.
         $result = grade_update(
