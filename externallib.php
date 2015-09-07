@@ -135,10 +135,10 @@ class block_mhaairs_gradebookservice_external extends external_api {
             $source
         );
 
-        $deleterequested = self::get_details_deleted($itemdetails);
+        $isdeleting = self::is_deleting($itemdetails);
 
         if (!$gitem) {
-            if (!$deleterequested) {
+            if (!$isdeleting) {
                 $logger->log('No grade item available. Returning '. GRADE_UPDATE_FAILED. '.');
                 return GRADE_UPDATE_FAILED;
             } else {
@@ -147,7 +147,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
             }
         }
 
-        if ($gitem and $deleterequested) {
+        if ($gitem and $isdeleting) {
             $logger->log('Failed to deleted grade item. Returning '. GRADE_UPDATE_FAILED. '.');
             return GRADE_UPDATE_FAILED;
         }
@@ -441,8 +441,10 @@ class block_mhaairs_gradebookservice_external extends external_api {
             self::check_valid($itemdetails, 'identity_type', 'string');
             self::check_valid($itemdetails, 'itemname', 'string');
             self::check_valid($itemdetails, 'itemtype', 'string', $badchars);
-            if (!is_numeric($itemdetails['idnumber']) && ($grades == "null" || $grades == null)) {
-                throw new invalid_parameter_exception("Parameter idnumber is of incorrect type!");
+            if (isset($itemdetails['idnumber'])) {
+                if (!is_numeric($itemdetails['idnumber']) && ($grades == "null" || $grades == null)) {
+                    throw new invalid_parameter_exception("Parameter idnumber is of incorrect type!");
+                }
             }
             self::check_valid($itemdetails, 'gradetype', 'int');
             self::check_valid($itemdetails, 'grademax', 'int');
@@ -661,7 +663,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
             return grade_item::fetch($params);
         }
 
-        // We are looking for an mhaairs assignment item.
+        // We are looking for an mhaairs manual item.
         // CONTRIB-5863 - Migrate old mod/quiz grade items to manual/mhaairs.
         if ($itemtype == self::ITEM_DEFAULT_TYPE) {
             // Does a mod quiz item exist for the requested iteminstance?
@@ -695,6 +697,26 @@ class block_mhaairs_gradebookservice_external extends external_api {
             'itemnumber' => $itemnumber,
         );
         $gitem = grade_item::fetch($params);
+
+        if (!$gitem) {
+            // Try to use existing if applicable.
+            $useexisting = self::is_using_existing($itemdetails);
+            $itemname = self::get_details_item_name($itemdetails);
+
+            if ($useexisting and $itemname) {
+                $params = array(
+                    'courseid' => $courseid,
+                    'itemtype' => 'manual',
+                    'itemname' => $itemname,
+                );
+                if ($gitem = grade_item::fetch($params)) {
+                    $gitem->itemmodule = $itemmodule;
+                    $gitem->iteminstance = $iteminstance;
+                    $gitem->itemnumber = $itemnumber;
+                    $gitem->update();
+                }
+            }
+        }
 
         if (!$gitem or $itemdetails) {
             // We need to create/update the item.
@@ -745,6 +767,19 @@ class block_mhaairs_gradebookservice_external extends external_api {
     }
 
     /**
+     * Returns the requested item name from the item details or null if not provided.
+     *
+     * @param  array $itemdetails
+     * @return string|null
+     */
+    private static function get_details_item_name($itemdetails) {
+        if (!empty($itemdetails['itemname'])) {
+            return $itemdetails['itemname'];
+        }
+        return null;
+    }
+
+    /**
      * Returns the requested category id from the item details or null if not provided.
      *
      * @param  array $itemdetails
@@ -763,8 +798,18 @@ class block_mhaairs_gradebookservice_external extends external_api {
      * @param  array $itemdetails
      * @return bool
      */
-    private static function get_details_deleted($itemdetails) {
+    private static function is_deleting($itemdetails) {
         return !empty($itemdetails['deleted']);
+    }
+
+    /**
+     * Returns true if 'useexisting' parameter is not empty in item details; false otherwise.
+     *
+     * @param  array $itemdetails
+     * @return bool
+     */
+    private static function is_using_existing($itemdetails) {
+        return !empty($itemdetails['useexisting']);
     }
 
 }
