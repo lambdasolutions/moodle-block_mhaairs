@@ -61,7 +61,7 @@ $functions = array(
                 'classpath' => 'blocks/mhaairs/externallib.php',
                 'description' => 'Returns user info including list of courses the user in enrolled in.',
                 'type' => 'read',
-                'capabilities'=> 'moodle/user:viewdetails, moodle/user:viewhiddendetails, moodle/course:useremail',
+                'capabilities' => 'moodle/user:viewdetails, moodle/user:viewhiddendetails, moodle/course:useremail',
                 'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
         ),
 
