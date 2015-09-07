@@ -305,17 +305,6 @@ class MHUtil {
     }
 
     /**
-     *
-     */
-    public static function handle_illegal_chars($str) {
-        if (strpos($str, "-") !== false) {
-            $str = '`'.$str.'`';
-        }
-        $str = str_replace(";", "\;", str_replace("'", "''", $str));
-        return $str;
-    }
-
-    /**
      * Validates that a user that corresponds to the token, secret, username and password,
      * can log in. Returns the authentication result.
      *
