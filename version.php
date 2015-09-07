@@ -27,8 +27,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version = 2015051100;
-$plugin->release = '2.9';
+$plugin->version = 2015051101;
+$plugin->release = '2.9.1';
 $plugin->requires = 2015051100;
 $plugin->cron = 0;
 $plugin->component = 'block_mhaairs';
