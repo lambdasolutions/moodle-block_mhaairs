@@ -26,6 +26,7 @@
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
+require_once(dirname(__FILE__). '/lib.php');
 require_once("$CFG->dirroot/blocks/mhaairs/externallib.php");
 
 /**
@@ -36,80 +37,10 @@ require_once("$CFG->dirroot/blocks/mhaairs/externallib.php");
  * @group       block_mhaairs
  * @group       block_mhaairs_service
  * @group       block_mhaairs_utilservice
- * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
+ * @copyright   2015 Itamar Tzadok <itamar@substantialmethods.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class block_mhaairs_utilservice_testcase extends advanced_testcase {
-    protected $course;
-    protected $bi;
-    protected $guest;
-    protected $teacher;
-    protected $assistant;
-    protected $student;
-
-    /**
-     * Test set up.
-     *
-     * This is executed before running any test in this file.
-     */
-    public function setUp() {
-        global $DB, $PAGE;
-
-        $this->resetAfterTest();
-
-        // Create a course we are going to add the block to.
-        // This is Test course 1 | tc_1.
-        // Add idnumber tc1, so that we can test identity type.
-        $record = array('idnumber' => 'tc1');
-        $this->course = $this->getDataGenerator()->create_course($record);
-        $courseid = $this->course->id;
-
-        // Set the page.
-        $PAGE->set_course($this->course);
-        $contextid = $PAGE->context->id;
-
-        // Create an instance of the block in the course.
-        $generator = $this->getDataGenerator()->get_plugin_generator('block_mhaairs');
-        $record = array('parentcontextid' => $contextid, 'pagetypepattern' => '*');
-        $this->bi = $generator->create_instance($record);
-
-        // Create users and enroll them in the course.
-        $roles = $DB->get_records_menu('role', array(), '', 'shortname,id');
-
-        // Teacher.
-        $user = $this->getDataGenerator()->create_user(array('username' => 'teacher'));
-        $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['editingteacher']);
-        $this->teacher = $user;
-
-        // Assistant.
-        $user = $this->getDataGenerator()->create_user(array('username' => 'assistant'));
-        $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['teacher']);
-        $this->assistant = $user;
-
-        // Student.
-        $user = $this->getDataGenerator()->create_user(array('username' => 'student'));
-        $this->getDataGenerator()->enrol_user($user->id, $courseid, $roles['student']);
-        $this->student = $user;
-
-        // Guest.
-        $user = $DB->get_record('user', array('username' => 'guest'));
-        $this->guest = $user;
-    }
-
-    /**
-     * Sets the user.
-     *
-     * @return void
-     */
-    protected function set_user($username) {
-        if ($username == 'admin') {
-            $this->setAdminUser();
-        } else if ($username == 'guest') {
-            $this->setGuestUser();
-        } else {
-            $this->setUser($this->$username);
-        }
-    }
+class block_mhaairs_utilservice_testcase extends block_mhaairs_testcase {
 
     /**
      * Get user info should fail when ssl is required and the connection
@@ -146,7 +77,7 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
         $this->set_user('admin');
 
         $secret = 'DF4#R66';
-        $userid = $this->student->username;
+        $userid = $this->student1->username;
         $equal = true;
 
         // SECRET NOT CONFIGURED.
@@ -193,8 +124,8 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
         $secret = 'DF4#R66';
         $fakeuserid = 278939;
         $fakeusername = 'johndoe';
-        $realuserid = $this->student->id;
-        $realusername = $this->student->username;
+        $realuserid = $this->student1->id;
+        $realusername = $this->student1->username;
 
         // Dataset for assert_user_not_found.
         // Each array item is a list of arguments the consitute a test case
@@ -236,8 +167,8 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
         $secret = 'DF4#R66';
         $fakeuserid = 278939;
         $fakeusername = 'johndoe';
-        $realuserid = $this->student->id;
-        $realusername = $this->student->username;
+        $realuserid = $this->student1->id;
+        $realusername = $this->student1->username;
 
         // Users dataset.
         // Username, course (idnumber), editingteacher, teacher, student.
@@ -297,9 +228,7 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
         set_config('block_mhaairs_shared_secret', $secret);
 
         foreach ($cases as $case) {
-            $internal = ($case->identitytype == 'internal');
-            $auserid = ($internal ? $users[$case->username]->id : $case->username);
-            $this->assert_user_found($auserid, $secret, $case);
+            $this->assert_user_found($case, $users, $secret);
         }
 
     }
@@ -378,10 +307,16 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
      * @param string $identitytype
      * @return void
      */
-    protected function assert_user_found($userid, $secret, $case) {
+    protected function assert_user_found($case, $users, $secret) {
+        global $CFG;
+
         // The service function.
         $callback = 'block_mhaairs_utilservice_external::get_user_info';
         $uservar = MHUtil::get_user_var($case->identitytype);
+
+        // Get the user id.
+        $internal = ($case->identitytype == 'internal');
+        $userid = ($internal ? $users[$case->username]->id : $case->username);
 
         // Create the token.
         $token = MHUtil::create_token($userid);
@@ -395,8 +330,18 @@ class block_mhaairs_utilservice_testcase extends advanced_testcase {
 
         $result = call_user_func_array($callback, $serviceparams);
         $this->assertEquals(MHUserInfo::SUCCESS, $result->status);
+
+        // Verify user info.
+        $user = $users[$case->username];
         $this->assertEquals('', $result->message);
-        $this->assertEquals($case->username, $result->user->username);
+        $this->assertEquals($user->username, $result->user->username);
+        $this->assertEquals($user->email, $result->user->email);
+
+        // Verify environment info.
+        $this->assertEquals($CFG->version, $result->environment['moodleversion']);
+        $this->assertEquals(get_component_version('block_mhaairs'), $result->environment['pluginversion']);
+
+        // Verify course info.
         $coursecount = 0;
         foreach (array('tc2', 'tc3', 'tc4', 'tc5') as $tc) {
             if (!empty($case->$tc)) {
