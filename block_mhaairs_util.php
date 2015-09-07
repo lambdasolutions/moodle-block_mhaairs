@@ -344,7 +344,7 @@ class MHUtil {
      * @return MHUserInfo
      */
     public static function get_user_info($token, $secret, $identitytype = null) {
-        global $DB;
+        global $DB, $CFG;
 
         $trace = '';
         $userinfo = new MHUserInfo(MHUserInfo::FAILURE);
@@ -367,6 +367,8 @@ class MHUtil {
 
         // We have token user id and we can try to fetch the user info.
         try {
+            require_once("$CFG->libdir/adminlib.php");
+
             // Get the user.
             $fields = 'id,deleted,suspended,username,idnumber,firstname,lastname,email,timezone';
             if (!$user = $DB->get_record('user', array($uservar => $tokenuserid), $fields)) {
@@ -378,6 +380,13 @@ class MHUtil {
             $userinfo = new MHUserInfo(MHUserInfo::SUCCESS);
             $userinfo->set_user($user);
             $trace = $trace.'; user is set';
+
+            // Get the environment info.
+            $version = get_component_version('moodle');
+            $userinfo->set_environment('moodleversion', $version);
+
+            $version = get_component_version('block_mhaairs');
+            $userinfo->set_environment('pluginversion', $version);
 
             // Get the user courses.
             $userid = $user->id;
@@ -451,6 +460,8 @@ class MHUserInfo {
     public $status;
     /* @var stdClass $user The user object. */
     public $user;
+    /* @var array $environment The user's environment info. */
+    public $environment;
     /* @var array $courses A list of course objects. */
     public $courses;
     /* @var string $message Unused. */
@@ -459,6 +470,7 @@ class MHUserInfo {
     public function __construct($status) {
         $this->status = $status;
         $this->user = array();
+        $this->environment = array();
         $this->courses = array();
     }
 
@@ -478,6 +490,10 @@ class MHUserInfo {
 
     public function set_user($user) {
         $this->user = $user;
+    }
+
+    public function set_environment($var, $value) {
+        $this->environment[$var] = $value;
     }
 }
 
