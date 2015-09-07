@@ -889,6 +889,12 @@ class block_mhaairs_utilservice_external extends external_api {
                         'timezone' => new external_value(PARAM_RAW, 'Time zone'),
                     ), 'An array of user info', VALUE_OPTIONAL
                 ),
+                'environment' => new external_single_structure(
+                    array(
+                        'moodleversion' => new external_value(PARAM_RAW, 'Moodle version'),
+                        'pluginversion' => new external_value(PARAM_RAW, 'Plugin version'),
+                    ), 'An array of environment info', VALUE_OPTIONAL
+                ),
                 'courses' => new external_multiple_structure(
                     new external_single_structure(
                         array(
