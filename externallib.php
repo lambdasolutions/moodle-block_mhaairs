@@ -698,6 +698,9 @@ class block_mhaairs_gradebookservice_external extends external_api {
         );
         $gitem = grade_item::fetch($params);
 
+        // A flag for update of existing item so that we don't do full update.
+        $existing = false;
+
         if (!$gitem) {
             // Try to use existing if applicable.
             $useexisting = self::is_using_existing($itemdetails);
@@ -714,11 +717,12 @@ class block_mhaairs_gradebookservice_external extends external_api {
                     $gitem->iteminstance = $iteminstance;
                     $gitem->itemnumber = $itemnumber;
                     $gitem->update();
+                    $existing = true;
                 }
             }
         }
 
-        if (!$gitem or $itemdetails) {
+        if (!$gitem or ($itemdetails and !$existing)) {
             // We need to create/update the item.
             $result = grade_update(
                 $source,
