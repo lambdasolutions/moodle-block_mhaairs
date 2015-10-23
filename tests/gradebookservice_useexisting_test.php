@@ -115,7 +115,8 @@ class block_mhaairs_gradebookservice_useexisting_testcase extends block_mhaairs_
 
     /**
      * Tests update grade service with an existing regular manual item with the same name
-     * as requested. Should update the item and turn it into mhaairs item.
+     * as requested. Should update the item and turn it into mhaairs item. Should not change
+     * any item property other than the item instance.
      *
      * @return void
      */
@@ -148,6 +149,7 @@ class block_mhaairs_gradebookservice_useexisting_testcase extends block_mhaairs_
         $service = 'block_mhaairs_gradebookservice_external::update_grade';
         $itemdetails = array(
             'itemname' => $itemname,
+            'grademax' => 90,
             'useexisting' => 1
         );
         $itemdetailsjson = urlencode(json_encode($itemdetails));
@@ -179,7 +181,8 @@ class block_mhaairs_gradebookservice_useexisting_testcase extends block_mhaairs_
         $itemcount = $DB->count_records('grade_items', array(
             'itemtype' => 'manual',
             'itemmodule' => 'mhaairs',
-            'iteminstance' => 345
+            'iteminstance' => 345,
+            'grademax' => 100.00000
         ));
         $this->assertEquals(1, $itemcount);
     }
