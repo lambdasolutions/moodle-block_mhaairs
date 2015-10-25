@@ -370,13 +370,6 @@ class MHUtil {
             $userinfo->set_user($user);
             $trace = $trace.'; user is set';
 
-            // Get the environment info.
-            $version = get_component_version('moodle');
-            $userinfo->set_environment('moodleversion', $version);
-
-            $version = get_component_version('block_mhaairs');
-            $userinfo->set_environment('pluginversion', $version);
-
             // Get the user courses.
             $userid = $user->id;
             $fields = 'id,category,fullname,shortname,idnumber,visible';
@@ -436,6 +429,44 @@ class MHUtil {
         return ($identitytype == 'internal' ? 'id' : 'username');
     }
 
+    /**
+     * Returns environment info: php version, db vendor, db version,
+     * moodle version and plugin version.
+     *
+     * @return array
+     */
+    public static function get_environment_info() {
+        global $DB, $CFG;
+
+        require_once("$CFG->libdir/environmentlib.php");
+        require_once("$CFG->libdir/adminlib.php");
+
+        $envinfo = array(
+            'system' => php_uname('s'),
+            'server' => php_sapi_name(),
+            'phpversion' => normalize_version(phpversion()),
+            'dbvendor' => $DB->get_dbvendor(),
+            'dbversion' => '',
+            'moodleversion' => '',
+            'pluginversion' => '',
+        );
+
+        $dbinfo = $DB->get_server_info();
+        if (!empty($dbinfo['version'])) {
+            $envinfo['dbversion'] = normalize_version($dbinfo['version']);
+        }
+
+        if ($version = get_component_version('moodle')) {
+            $envinfo['moodleversion'] = normalize_version($version);
+        }
+
+        if ($version = get_component_version('block_mhaairs')) {;
+            $envinfo['pluginversion'] = normalize_version($version);
+        }
+
+        return (object) $envinfo;
+    }
+
 }
 
 /**
@@ -449,8 +480,6 @@ class MHUserInfo {
     public $status;
     /* @var stdClass $user The user object. */
     public $user;
-    /* @var array $environment The user's environment info. */
-    public $environment;
     /* @var array $courses A list of course objects. */
     public $courses;
     /* @var string $message Unused. */
@@ -479,10 +508,6 @@ class MHUserInfo {
 
     public function set_user($user) {
         $this->user = $user;
-    }
-
-    public function set_environment($var, $value) {
-        $this->environment[$var] = $value;
     }
 }
 

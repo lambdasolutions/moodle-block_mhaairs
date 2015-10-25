@@ -234,6 +234,28 @@ class block_mhaairs_utilservice_testcase extends block_mhaairs_testcase {
     }
 
     /**
+     * Get environment info should return envrionment info including system, server,
+     * php version, db vendor and version, moodle version and plugin version.
+     *
+     * @return void
+     */
+    public function test_get_environment_info() {
+        $this->set_user('admin');
+
+        $callback = 'block_mhaairs_utilservice_external::get_environment_info';
+        $result = call_user_func_array($callback, array());
+
+        // Verify environment info.
+        $this->assertEquals(true, !empty($result->system));
+        $this->assertEquals(true, !empty($result->server));
+        $this->assertEquals(true, !empty($result->phpversion));
+        $this->assertEquals(true, !empty($result->dbvendor));
+        $this->assertEquals(true, !empty($result->dbversion));
+        $this->assertEquals(true, !empty($result->moodleversion));
+        $this->assertEquals(true, !empty($result->pluginversion));
+    }
+
+    /**
      * Asserts invalid token against get_user_info with the specified token and secret.
      * If secret is omitted, try to take the secret from the configuration. The secret
      * parameter is used for creating the encoded token.
@@ -336,10 +358,6 @@ class block_mhaairs_utilservice_testcase extends block_mhaairs_testcase {
         $this->assertEquals('', $result->message);
         $this->assertEquals($user->username, $result->user->username);
         $this->assertEquals($user->email, $result->user->email);
-
-        // Verify environment info.
-        $this->assertEquals($CFG->version, $result->environment['moodleversion']);
-        $this->assertEquals(get_component_version('block_mhaairs'), $result->environment['pluginversion']);
 
         // Verify course info.
         $coursecount = 0;
