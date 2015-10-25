@@ -828,6 +828,45 @@ class block_mhaairs_gradebookservice_external extends external_api {
 class block_mhaairs_utilservice_external extends external_api {
 
     /**
+     * Allows external applications to retrieve the environment info.
+     *
+     * @return
+     */
+    public static function get_environment_info() {
+        // Get the environment info.
+        $result = MHUtil::get_environment_info();
+        return $result;
+    }
+
+    /**
+     * Returns description of method parameters.
+     *
+     * @return external_function_parameters
+     */
+    public static function get_environment_info_parameters() {
+        return new external_function_parameters(array());
+    }
+
+    /**
+     * Returns description of method result value.
+     *
+     * @return external_description
+     */
+    public static function get_environment_info_returns() {
+        return new external_single_structure(
+            array(
+                'system' => new external_value(PARAM_TEXT, 'Operating system'),
+                'server' => new external_value(PARAM_TEXT, 'Server api'),
+                'phpversion' => new external_value(PARAM_TEXT, 'PHP version'),
+                'dbvendor' => new external_value(PARAM_TEXT, 'DB vendor'),
+                'dbversion' => new external_value(PARAM_TEXT, 'DB version'),
+                'moodleversion' => new external_value(PARAM_TEXT, 'Moodle version'),
+                'pluginversion' => new external_value(PARAM_TEXT, 'Plugin version'),
+            )
+        );
+    }
+
+    /**
      * Allows external applications to retrieve MHUserInfo by token.
      *
      * @param string $token
@@ -892,12 +931,6 @@ class block_mhaairs_utilservice_external extends external_api {
                         'email' => new external_value(PARAM_RAW, 'Email'),
                         'timezone' => new external_value(PARAM_RAW, 'Time zone'),
                     ), 'An array of user info', VALUE_OPTIONAL
-                ),
-                'environment' => new external_single_structure(
-                    array(
-                        'moodleversion' => new external_value(PARAM_RAW, 'Moodle version'),
-                        'pluginversion' => new external_value(PARAM_RAW, 'Plugin version'),
-                    ), 'An array of environment info', VALUE_OPTIONAL
                 ),
                 'courses' => new external_multiple_structure(
                     new external_single_structure(

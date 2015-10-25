@@ -75,6 +75,15 @@ $functions = array(
                 'type' => 'read',
                 'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
         ),
+
+        'block_mhaairs_get_environment_info' => array(
+                'classname' => 'block_mhaairs_utilservice_external',
+                'methodname' => 'get_environment_info',
+                'classpath' => 'blocks/mhaairs/externallib.php',
+                'description' => 'Returns environment info.',
+                'type' => 'read',
+                'testclientpath' => 'blocks/mhaairs/admin/testclient_forms.php',
+        ),
 );
 
 // We define the services to install as pre-build services.
@@ -95,6 +104,7 @@ $services = array(
                 'functions' => array (
                     'block_mhaairs_get_user_info',
                     'block_mhaairs_validate_login',
+                    'block_mhaairs_get_environment_info',
                 ),
                 'shortname' => 'mhaairs_util',
                 'restrictedusers'   => 0,

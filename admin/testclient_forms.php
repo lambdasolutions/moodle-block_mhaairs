@@ -483,3 +483,16 @@ class block_mhaairs_get_user_info_form extends block_mhaairs_service_form {
         return $this->format_params($serviceparams);
     }
 }
+
+/**
+ * Block mhaairs get environment info test client form.
+ */
+class block_mhaairs_get_environment_info_form extends block_mhaairs_service_form {
+    public function get_params() {
+        if (!$data = $this->get_data()) {
+            return null;
+        }
+
+        return array();
+    }
+}

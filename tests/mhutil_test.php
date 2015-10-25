@@ -55,4 +55,16 @@ class block_mhaairs_util_testcase extends advanced_testcase {
         $istokenvalid = MHUtil::is_token_valid($encodedtoken, $secret);
         $this->assertEquals(true, $istokenvalid);
     }
+
+    /**
+     * Tests environment info.
+     *
+     * @return void
+     */
+    public function test_environment_info() {
+        $this->resetAfterTest();
+
+        $envinfo = MHUtil::get_environment_info();
+        $this->assertEquals(true, !empty($envinfo->phpversion));
+    }
 }
