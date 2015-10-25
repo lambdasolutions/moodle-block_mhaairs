@@ -57,46 +57,17 @@ class MHUtil {
     }
 
     /**
-     * Returns a token string consisting of key=value pairs of customer number, user id
-     * and username and time, as well as additional optional parameters.
+     * Returns a token string consisting of key=value pairs.
      *
-     * @param string $customer
-     * @param int $userid
-     * @param string $username
-     * @param string $courseid
-     * @param string $courseinternalid
-     * @param string $linktype
-     * @param string $rolename
-     * @param string $coursename
+     * @param string $params Associative array of key value pairs.
      * @return string
      */
-    public static function create_token2($customer, $userid, $username, $courseid = null,
-                $courseinternalid = null, $linktype = null, $rolename = null, $coursename = null) {
-        $parameters = array('customer' => $customer,
-                            'userid'   => $userid,
-                            'username' => $username,
-                            'time'     => self::get_time_stamp());
-
-        if (!empty($courseid)) {
-            $parameters['courseid'] = $courseid;
-        }
-        if (!empty($courseinternalid)) {
-            $parameters['courseinternalid'] = $courseinternalid;
-        }
-        if (!empty($linktype)) {
-            $parameters['linktype'] = $linktype;
-        }
-
-        if (!empty($rolename)) {
-            $parameters['role'] = $rolename;
-        }
-
-        if (!empty($coursename)) {
-            $parameters['coursename'] = $coursename;
-        }
-
+    public static function create_token2(array $params) {
         $result = '';
-        foreach ($parameters as $name => $value) {
+
+        $params['time'] = self::get_time_stamp();
+
+        foreach ($params as $name => $value) {
             if (!empty($result)) {
                 $result .= '&';
             }
@@ -467,6 +438,64 @@ class MHUtil {
         return (object) $envinfo;
     }
 
+    /**
+     * Returns url for sso.
+     *
+     * @return moodle_url
+     */
+    public static function get_sso_url($serviceurl, $serviceid) {
+        global $COURSE, $USER, $CFG;
+
+        // Service url.
+        $serviceurl = self::hex_decode($serviceurl);
+
+        // Service id.
+        $serviceid = self::hex_decode($serviceid);
+
+        $course = $COURSE;
+        $courseid = empty($course->idnumber) ? $course->id : $course->idnumber;
+        $context = context_course::instance($course->id);
+        $rolename = null;
+
+        // Normalize the user's role name to insructor or student.
+        if ($roles = get_user_roles($context, $USER->id)) {
+            foreach ($roles as $role) {
+                $rolename = empty($role->name) ? $role->shortname : $role->name;
+                if ($rolename == 'teacher' || $rolename == 'editingteacher') {
+                    $rolename = 'instructor';
+                    break;
+                }
+            }
+            if ($rolename != null && $rolename != 'instructor') {
+                $rolename = 'student';
+            }
+        }
+
+        // Get the environment info.
+        $envinfo = self::get_environment_info();
+
+        // Create the user token.
+        $params = array(
+            'customer' => $CFG->block_mhaairs_customer_number,
+            'moodleversion' => $envinfo->moodleversion,
+            'pluginversion' => $envinfo->pluginversion,
+            'userid' => $USER->username,
+            'username' => urlencode($USER->firstname.' '.$USER->lastname),
+            'useremail' => $USER->email,
+            'courseid' => $courseid,
+            'courseinternalid' => $course->id,
+            'coursename' => urlencode($course->shortname),
+            'role' => $rolename,
+            'linktype' => $serviceid,
+        );
+        $token = self::create_token2($params);
+
+        // Encode the token.
+        $encodedtoken = MHUtil::encode_token2($token, $CFG->block_mhaairs_shared_secret);
+
+        $url = new moodle_url($serviceurl, array('token' => $encodedtoken));
+        return $url;
+    }
 }
 
 /**

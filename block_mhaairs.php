@@ -238,9 +238,9 @@ class block_mhaairs extends block_base {
             $icon = html_writer::tag('img', '', $iconparams);
             // Url.
             $urlparams = array(
-                'url' => MHUtil::hex_encode($aserv['ServiceUrl']),
-                'id'  => MHUtil::hex_encode($aserv['ServiceID']),
-                'cid' => $course->id
+                'serviceurl' => MHUtil::hex_encode($aserv['ServiceUrl']),
+                'serviceid'  => MHUtil::hex_encode($aserv['ServiceID']),
+                'courseid' => $course->id
             );
             $url = new moodle_url('/blocks/mhaairs/redirect.php', $urlparams);
             // Link.
