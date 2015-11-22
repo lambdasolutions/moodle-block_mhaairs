@@ -114,8 +114,8 @@ class block_mhaairs_gradebookservice_useexisting_testcase extends block_mhaairs_
     }
 
     /**
-     * Tests update grade service with an existing regular manual item with the same name
-     * as requested. Should update the item and turn it into mhaairs item. Should not change
+     * Tests update grade service with existing regular manual items with the same name
+     * as requested. Should update the first item and turn it into mhaairs item. Should not change
      * any item property other than the item instance.
      *
      * @return void
@@ -127,30 +127,42 @@ class block_mhaairs_gradebookservice_useexisting_testcase extends block_mhaairs_
 
         $this->assertEquals(0, $DB->count_records('grade_items'));
 
+        $catname = 'Existing grade category';
         $itemname = 'Existing grade item';
 
-        // Create a manual grade item directly.
-        $result = grade_update(
-            '',
-            $this->course->id,
-            'manual',
-            null,
-            null,
-            0,
-            null,
-            array(
-                'itemname' => $itemname,
-            )
+        // Create category.
+        $catparams = array(
+            'fullname' => $catname,
+            'courseid' => $this->course->id,
+            'hidden' => false,
+        );
+        $category = new \grade_category($catparams, false);
+        $category->id = $category->insert();
+
+        // Add two manual grade item directly.
+        $itemparams = array(
+            'courseid' => $this->course->id,
+            'itemtype' => 'manual',
+            'itemname' => $itemname,
+            'categoryid' => $category->id,
         );
 
+        $gitem = new \grade_item($itemparams, false);
+        $gitem->insert('manual');
+
+        $gitem = new \grade_item($itemparams, false);
+        $gitem->insert('manual');
+
+        // There should be 4 items (including course and category items).
         $itemcount = $DB->count_records('grade_items');
-        $this->assertEquals(2, $itemcount);
+        $this->assertEquals(4, $itemcount);
 
         $service = 'block_mhaairs_gradebookservice_external::update_grade';
         $itemdetails = array(
             'itemname' => $itemname,
             'grademax' => 90,
-            'useexisting' => 1
+            'useexisting' => 1,
+            'categoryid' => 'New grade category',
         );
         $itemdetailsjson = urlencode(json_encode($itemdetails));
 
@@ -167,22 +179,34 @@ class block_mhaairs_gradebookservice_useexisting_testcase extends block_mhaairs_
 
         $result = call_user_func_array($service, $servicedata);
 
-        // 2 grade items overall.
-        $itemcount = $DB->count_records('grade_items');
+        // 2 grade categories overall.
+        $itemcount = $DB->count_records('grade_categories');
         $this->assertEquals(2, $itemcount);
 
-        // 1 manual item remaining.
+        // 4 grade items overall.
+        $itemcount = $DB->count_records('grade_items');
+        $this->assertEquals(4, $itemcount);
+
+        // 2 manual items remaining.
         $itemcount = $DB->count_records('grade_items', array(
             'itemtype' => 'manual',
         ));
-        $this->assertEquals(1, $itemcount);
+        $this->assertEquals(2, $itemcount);
 
         // 1 mhaairs item.
         $itemcount = $DB->count_records('grade_items', array(
             'itemtype' => 'manual',
             'itemmodule' => 'mhaairs',
+        ));
+        $this->assertEquals(1, $itemcount);
+
+        // 1 mhaairs item with the item instance and original grade.
+        $itemcount = $DB->count_records('grade_items', array(
+            'itemtype' => 'manual',
+            'itemmodule' => 'mhaairs',
             'iteminstance' => 345,
-            'grademax' => 100.00000
+            'grademax' => 100.00000,
+            'categoryid' => $category->id,
         ));
         $this->assertEquals(1, $itemcount);
     }
@@ -243,14 +267,6 @@ class block_mhaairs_gradebookservice_useexisting_testcase extends block_mhaairs_
         // 2 grade items overall.
         $itemcount = $DB->count_records('grade_items');
         $this->assertEquals(2, $itemcount);
-
-        // No 345 mhaairs item.
-        $itemcount = $DB->count_records('grade_items', array(
-            'itemtype' => 'manual',
-            'itemmodule' => 'mhaairs',
-            'iteminstance' => 345
-        ));
-        $this->assertEquals(0, $itemcount);
 
         // 1 3458 mhaairs item.
         $itemcount = $DB->count_records('grade_items', array(

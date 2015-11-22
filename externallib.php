@@ -117,13 +117,21 @@ class block_mhaairs_gradebookservice_external extends external_api {
         $courseid = $course->id;
         $logger->log('Course validated.');
 
-        // Create a grade category if needed.
-        $logger->log("Preparing to check and create grade category if needed.");
-        $catname = self::get_details_category_name($itemdetails);
-        $category = self::get_grade_category($catname, $courseid);
+        // Are we trying to use existing item?
+        $useexisting = self::is_using_existing($itemdetails);
+        // Are we deleting an item?
+        $isdeleting = self::is_deleting($itemdetails);
 
-        // Create/update the grade item if needed.
-        $logger->log('Creating/updating grade item.');
+        // Create a grade category if needed and if not using existing.
+        $category = null;
+        if (!$useexisting and !$isdeleting) {
+            $logger->log("Preparing to check and create grade category if needed.");
+            $catname = self::get_details_category_name($itemdetails);
+            $category = self::get_grade_category($catname, $courseid);
+        }
+
+        // Create/update/delete the grade item if needed.
+        $logger->log('Creating/updating/deleting grade item.');
         $gitem = self::get_grade_item(
             $courseid,
             self::ITEM_DEFAULT_TYPE,
@@ -135,8 +143,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
             $source
         );
 
-        $isdeleting = self::is_deleting($itemdetails);
-
+        // No grade item is either successful deletion of failure on creation.
         if (!$gitem) {
             if (!$isdeleting) {
                 $logger->log('No grade item available. Returning '. GRADE_UPDATE_FAILED. '.');
@@ -147,6 +154,7 @@ class block_mhaairs_gradebookservice_external extends external_api {
             }
         }
 
+        // We might fail to delete.
         if ($gitem and $isdeleting) {
             $logger->log('Failed to deleted grade item. Returning '. GRADE_UPDATE_FAILED. '.');
             return GRADE_UPDATE_FAILED;
@@ -413,19 +421,6 @@ class block_mhaairs_gradebookservice_external extends external_api {
 
     // UTILITY.
     /**
-     *
-     */
-    protected static function can_create_grade_item($itemdetails) {
-        $fields = array('itemname', 'idnumber', 'gradetype', 'grademax', 'iteminfo');
-        foreach ($fields as $field) {
-            if (!array_key_exists($field, $itemdetails)) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    /**
      * Validates item details data.
      *
      * @param array $itemdetails An array of item details.
@@ -688,31 +683,42 @@ class block_mhaairs_gradebookservice_external extends external_api {
             }
         }
 
-        // Fetch the item.
-        $params = array(
+        // The item params.
+        $itemparams = array(
             'courseid' => $courseid,
             'itemtype' => $itemtype,
             'itemmodule' => $itemmodule,
             'iteminstance' => $iteminstance,
             'itemnumber' => $itemnumber,
         );
-        $gitem = grade_item::fetch($params);
 
-        // A flag for update of existing item so that we don't do full update.
+        // We need the item name for using existing or for creating new.
+        $itemname = self::get_details_item_name($itemdetails);
+
+        // Try to use existing if applicable.
         $existing = false;
+        if ($useexisting = self::is_using_existing($itemdetails)) {
+            if ($itemname) {
+                $gitems = null;
 
-        if (!$gitem) {
-            // Try to use existing if applicable.
-            $useexisting = self::is_using_existing($itemdetails);
-            $itemname = self::get_details_item_name($itemdetails);
-
-            if ($useexisting and $itemname) {
                 $params = array(
                     'courseid' => $courseid,
-                    'itemtype' => 'manual',
+                    'itemtype' => self::ITEM_DEFAULT_TYPE,
+                    'itemmodule' => self::ITEM_DEFAULT_MODULE,
                     'itemname' => $itemname,
                 );
-                if ($gitem = grade_item::fetch($params)) {
+
+                // Try to fetch all mhaairs items with that name.
+                if (!$gitems = grade_item::fetch_all($params)) {
+                    // No mhaairs items so try any manual items.
+                    unset($params['itemmodule']);
+                    $params['itemtype'] = 'manual';
+                    $gitems = grade_item::fetch_all($params);
+                }
+
+                if ($gitems) {
+                    // Take the first item.
+                    $gitem = reset($gitems);
                     $gitem->itemmodule = $itemmodule;
                     $gitem->iteminstance = $iteminstance;
                     $gitem->itemnumber = $itemnumber;
@@ -720,10 +726,20 @@ class block_mhaairs_gradebookservice_external extends external_api {
                     $existing = true;
                 }
             }
+        } else {
+            // Fetch the item.
+            $gitem = grade_item::fetch($itemparams);
         }
 
-        if (!$gitem or ($itemdetails and !$existing)) {
-            // We need to create/update the item.
+        // We may need to create/update/delete the item.
+        if ($itemdetails and (!$gitem or !$existing)) {
+            $isdeleting = self::is_deleting($itemdetails);
+
+            // If creating, must have item name; the reset can default.
+            if (!$isdeleting and !$itemname) {
+                return null;
+            }
+
             $result = grade_update(
                 $source,
                 $courseid,
@@ -739,12 +755,13 @@ class block_mhaairs_gradebookservice_external extends external_api {
                 return null;
             }
 
-            if (!$gitem = grade_item::fetch($params)) {
+            if (!$gitem = grade_item::fetch($itemparams)) {
                 return null;
             }
         }
 
-        if ($category) {
+        // Update category if not existing.
+        if ($category and !$existing) {
             // Optional.
             try {
                 $gitem->categoryid = $category->id;
