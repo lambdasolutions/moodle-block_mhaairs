@@ -38,6 +38,7 @@ require_once("$CFG->libdir/gradelib.php");
  * @group       block_mhaairs
  * @group       block_mhaairs_service
  * @group       block_mhaairs_gradebookservice
+ * @group       block_mhaairs_gradebookservice_test
  * @copyright   2014 Itamar Tzadok <itamar@substantialmethods.com>
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -469,6 +470,65 @@ class block_mhaairs_gradebookservice_testcase extends block_mhaairs_testcase {
         // Verify score updated.
         $usergrade = $DB->get_field('grade_grades', 'finalgrade', array('userid' => $this->student1->id));
         $this->assertEquals(93, (int) $usergrade);
+    }
+
+    /**
+     * Tests updates score without sending item details.
+     * Grade item should not be created without item name.
+     *
+     * @return void
+     */
+    public function test_update_score_without_item_details() {
+        global $DB;
+
+        $this->set_user('admin');
+
+        $this->assertEquals(0, $DB->count_records('grade_items'));
+
+        // Add an mhaairs item directly.
+        $iteminstance = 24993;
+        $itemparams = array(
+            'courseid' => $this->course->id,
+            'itemtype' => 'manual',
+            'itemmodule' => 'mhaairs',
+            'iteminstance' => $iteminstance,
+            'itemname' => 'MH Assignment',
+        );
+
+        $gitem = new \grade_item($itemparams, false);
+        $gitem->insert('mhaairs');
+
+        $this->assertEquals(2, $DB->count_records('grade_items'));
+
+        // Send score via service without details, item by instance doesn't exist.
+        $service = 'block_mhaairs_gradebookservice_external::update_grade';
+
+        $grades = array(
+            'userid' => 'student1',
+            'rawgrade' => 93,
+        );
+        $gradesjson = urlencode(json_encode($grades));
+
+        $servicedata = array();
+        $servicedata['source'] = 'mhaairs';
+        $servicedata['courseid'] = 'tc1';
+        $servicedata['itemtype'] = 'manual';
+        $servicedata['itemmodule'] = 'mhaairs';
+        $servicedata['iteminstance'] = 111;
+        $servicedata['itemnumber'] = 0;
+        $servicedata['grades'] = $gradesjson;
+        $servicedata['itemdetails'] = null;
+
+        $result = call_user_func_array($service, $servicedata);
+        $this->assertEquals(GRADE_UPDATE_FAILED, $result);
+        $this->assertEquals(2, $DB->count_records('grade_items'));
+
+        $servicedata['iteminstance'] = $iteminstance;
+
+        $result = call_user_func_array($service, $servicedata);
+        $this->assertEquals(GRADE_UPDATE_OK, $result);
+        $this->assertEquals(2, $DB->count_records('grade_items'));
+        $this->assertEquals(1, $DB->count_records('grade_grades'));
     }
 
     /**
