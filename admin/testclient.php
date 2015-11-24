@@ -60,7 +60,8 @@ $functionstr = get_string('function', 'webservice');
 $functionselect = $OUTPUT->url_select(
     array_flip($functions),
     $selected,
-    array('' => $functionstr. '...')
+    array('' => $functionstr. '...'),
+    'function-selector'
 );
 
 if (!$function) {
@@ -111,15 +112,15 @@ if ($data = $mform->get_data()) {
     $server = 'simpleserver.php';
     $requestparams = array();
 
+    if (!empty($data->moodlewsrestformat)) {
+        $requestparams['moodlewsrestformat'] = $data->moodlewsrestformat;
+    }
     if ($authmethod == 'simple') {
         $requestparams['wsusername'] = urlencode($data->wsusername);
         $requestparams['wspassword'] = urlencode($data->wspassword);
     } else if ($authmethod == 'token') {
         $server = 'server.php';
         $requestparams['wstoken'] = urlencode($data->token);
-    }
-    if (!empty($data->moodlewsrestformat)) {
-        $requestparams['moodlewsrestformat'] = $data->moodlewsrestformat;
     }
     $serverurl = new \moodle_url("/webservice/$protocol/$server", $requestparams);
 
