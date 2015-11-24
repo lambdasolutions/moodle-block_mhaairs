@@ -108,7 +108,7 @@ class block_mhaairs_service_form extends moodleform {
         $mform->setType('wsusername', PARAM_USERNAME);
         $mform->disabledIf('wsusername', 'authmethod', 'neq', 'simple');
 
-        $mform->addElement('text', 'wspassword', 'mhpassword');
+        $mform->addElement('password', 'wspassword', 'mhpassword');
         $mform->setType('wspassword', PARAM_RAW);
         $mform->disabledIf('wspassword', 'authmethod', 'neq', 'simple');
 
