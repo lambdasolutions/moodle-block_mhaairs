@@ -46,21 +46,21 @@ class behat_block_mhaairs extends behat_base {
       *
       * @Given /^I set the mhaairs customer number and shared secret$/
       */
-     public function set_the_mhaairs_customer_number_and_shared_secret() {
+    public function set_the_mhaairs_customer_number_and_shared_secret() {
         $steps = array();
 
-         $customernumber = get_config(null, 'behat_mhaairs_customer_number');
-         $sharedsecret = get_config(null, 'behat_mhaairs_shared_secret');
+        $customernumber = get_config(null, 'behat_mhaairs_customer_number');
+        $sharedsecret = get_config(null, 'behat_mhaairs_shared_secret');
 
-         $data = array(
-             "| Customer Number | $customernumber |",
-             "| Shared Secret   | $sharedsecret   |",
-         );
-         $table = new TableNode(implode("\n", $data));
-         $steps[] = new Given('I set the following fields to these values:', $table);
+        $data = array(
+            "| Customer Number | $customernumber |",
+            "| Shared Secret   | $sharedsecret   |",
+        );
+        $table = new TableNode(implode("\n", $data));
+        $steps[] = new Given('I set the following fields to these values:', $table);
 
-         return $steps;
-     }
+        return $steps;
+    }
 
     /**
      * Sets the customer number and shared secret from bht config.
@@ -128,7 +128,7 @@ class behat_block_mhaairs extends behat_base {
             require_once("$CFG->dirroot/webservice/lib.php");
             $webservicemanager = new webservice();
 
-            //check the the user is allowed for the service
+            // Check the the user is allowed for the service.
             $selectedservice = $webservicemanager->get_external_service_by_id($service);
             if ($selectedservice->restrictedusers) {
                 $restricteduser = $webservicemanager->get_ws_authorised_user($service, $userid);
@@ -137,7 +137,7 @@ class behat_block_mhaairs extends behat_base {
                 }
             }
 
-            //check if the user is deleted. unconfirmed, suspended or guest
+            // Check if the user is deleted. unconfirmed, suspended or guest.
             $user = $DB->get_record('user', array('id' => $userid));
             if ($user->id == $CFG->siteguest or $user->deleted or !$user->confirmed or $user->suspended) {
                 throw new moodle_exception('forbiddenwsuser', 'webservice');
