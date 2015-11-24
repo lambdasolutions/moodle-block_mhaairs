@@ -22,8 +22,6 @@
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define('TOKEN_VALIDITY_INTERVAL', 300);
-
 /**
  * Class for the mhaairs util api.
  *
@@ -32,6 +30,9 @@ define('TOKEN_VALIDITY_INTERVAL', 300);
  * @license     http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class MHUtil {
+
+    const TOKEN_VALIDITY_INTERVAL = 300;
+
     /**
      * Returns formatted GMT/UTC data/time.
      *
@@ -284,7 +285,7 @@ class MHUtil {
     public static function validate_login($token, $secret, $username, $password) {
         $trace = '';
         $result = new MHAuthenticationResult(MHAuthenticationResult::FAILURE, '', '');
-        if (self::is_token_valid($token, $secret, TOKEN_VALIDITY_INTERVAL, 'md5', $trace) || empty($secret)) {
+        if (self::is_token_valid($token, $secret, self::TOKEN_VALIDITY_INTERVAL, 'md5', $trace) || empty($secret)) {
             $user = authenticate_user_login($username, $password);
             if ($user != false) {
                 $result = new MHAuthenticationResult(MHAuthenticationResult::SUCCESS, $user->username, '');
@@ -313,7 +314,7 @@ class MHUtil {
 
         // With secret the token must be valid.
         if ($secret) {
-            if (!self::is_token_valid($token, $secret, TOKEN_VALIDITY_INTERVAL, 'md5', $trace)) {
+            if (!self::is_token_valid($token, $secret, self::TOKEN_VALIDITY_INTERVAL, 'md5', $trace)) {
                 $userinfo->message = 'error: token is invalid';
                 return $userinfo;
             }
