@@ -432,7 +432,7 @@ class MHUtil {
             $envinfo['moodleversion'] = normalize_version($version);
         }
 
-        if ($version = get_component_version('block_mhaairs')) {;
+        if ($version = get_component_version('block_mhaairs')) {
             $envinfo['pluginversion'] = normalize_version($version);
         }
 
@@ -492,7 +492,7 @@ class MHUtil {
         $token = self::create_token2($params);
 
         // Encode the token.
-        $encodedtoken = MHUtil::encode_token2($token, $CFG->block_mhaairs_shared_secret);
+        $encodedtoken = self::encode_token2($token, $CFG->block_mhaairs_shared_secret);
 
         $url = new moodle_url($serviceurl, array('token' => $encodedtoken));
         return $url;
