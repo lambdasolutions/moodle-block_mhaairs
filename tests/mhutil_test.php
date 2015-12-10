@@ -25,7 +25,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once('/../block_mhaairs_util.php');
+global $CFG;
+require_once("$CFG->dirroot/blocks/mhaairs/block_mhaairs_util.php");
 
 /**
  * PHPUnit mhaairs util test case.
