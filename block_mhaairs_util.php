@@ -567,58 +567,25 @@ class MHAuthenticationResult {
  */
 class MHLog {
     /* @var string */
-    protected $filepath = null;
+    protected $_filepath = null;
 
     /* @var string */
-    protected $dirpath = null;
+    protected $_dirpath = null;
 
     /* @var null|bool */
-    protected $logenabled = null;
-
-    /* @var block_mhaairs_log */
-    private static $instance = null;
+    protected $_logenabled = null;
 
     /**
      * @return block_mhaairs_log
      */
-    public static function instance($reset = false) {
-        if ($reset or !self::$instance instanceof self) {
-            self::$instance = new self;
-        }
-        return self::$instance;
+    public static function instance() {
+        return new self;
     }
 
     /**
-     * @param null|bool $enabled
+     * Private constructor.
      */
     private function __construct() {
-        $this->filepath = null;
-        $this->logenabled = get_config('core', 'block_mhaairs_gradelog') ? true : false;
-        $dir = $this->dirpath;
-        if ($dir === null) {
-            $mdata = get_config('core', 'dataroot');
-            $sep = DIRECTORY_SEPARATOR;
-            $dir = make_writable_directory("{$mdata}{$sep}mhaairs", false);
-        }
-        if ($dir !== false) {
-            $this->dirpath = $dir;
-            $fileprefix = userdate(time(), 'mhaairs_%Y-%m-%d_%H-%M-%S_');
-            while (empty($this->filepath)) {
-                $name = uniqid($fileprefix, true);
-                $fullname = "{$dir}{$sep}{$name}.log";
-                if (!file_exists($fullname)) {
-                    $this->filepath = $fullname;
-                }
-            }
-        }
-    }
-
-    /**
-     * DTOR
-     */
-    public function __destruct() {
-        $this->filepath = null;
-        $this->logenabled = null;
     }
 
     /**
@@ -644,17 +611,45 @@ class MHLog {
      * @return int|bool
      */
     public function log($data) {
-        if ($this->logenabled && $this->filepath) {
-            return file_put_contents($this->filepath, $data.PHP_EOL, FILE_APPEND);
+        if ($this->logenabled) {
+            if ($filepath = $this->filepath) {
+                return file_put_contents($this->filepath, $data.PHP_EOL, FILE_APPEND);
+            }
         }
         return false;
+    }
+
+    /**
+     * @return string|bool
+     */
+    public function get_dirpath() {
+        global $CFG;
+
+        if ($this->_dirpath === null) {
+            $sep = DIRECTORY_SEPARATOR;
+            $this->_dirpath = make_writable_directory("$CFG->dataroot{$sep}mhaairs", false);
+        }
+        return $this->_dirpath;
     }
 
     /**
      * @return bool
      */
     public function get_filepath() {
-        return $this->filepath;
+        if ($this->_filepath === null) {
+            if ($dir = $this->dirpath) {
+                $sep = DIRECTORY_SEPARATOR;
+                $fileprefix = userdate(time(), 'mhaairs_%Y-%m-%d_%H-%M-%S_');
+                while (empty($this->_filepath)) {
+                    $name = uniqid($fileprefix, true);
+                    $fullname = "{$dir}{$sep}{$name}.log";
+                    if (!file_exists($fullname)) {
+                        $this->_filepath = $fullname;
+                    }
+                }
+            }
+        }
+        return $this->_filepath;
     }
 
     /**
@@ -671,15 +666,18 @@ class MHLog {
      * @return bool
      */
     public function get_logenabled() {
-        return $this->logenabled;
+        if ($this->_logenabled === null) {
+            $this->_logenabled = get_config('core', 'block_mhaairs_gradelog') ? true : false;
+        }
+        return $this->_logenabled;
     }
 
     /**
      * Delete current log file
      */
     public function delete() {
-        if (is_writable($this->filepath)) {
-            unlink($this->filepath);
+        if ($this->_filepath and is_writable($this->_filepath)) {
+            unlink($this->_filepath);
         }
     }
 
@@ -687,9 +685,13 @@ class MHLog {
      * Delete entire log directory
      */
     public function delete_all() {
-        if (is_dir($this->dirpath) && is_writable($this->dirpath)) {
+        if (!$dirpath = $this->dirpath) {
+            return;
+        }
+
+        if (is_dir($dirpath) && is_writable($dirpath)) {
             $fileleft = false;
-            $it = new RecursiveDirectoryIterator($this->dirpath, RecursiveDirectoryIterator::SKIP_DOTS);
+            $it = new RecursiveDirectoryIterator($dirpath, RecursiveDirectoryIterator::SKIP_DOTS);
             $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
             foreach ($files as $file) {
                 if ($file->getFilename() === '.' || $file->getFilename() === '..') {
@@ -707,7 +709,7 @@ class MHLog {
                 }
             }
             if (!$fileleft) {
-                rmdir($this->dirpath);
+                rmdir($dirpath);
             }
         }
     }
@@ -719,8 +721,9 @@ class MHLog {
      */
     public function get_logs() {
         $logs = array();
+        $dirpath = $this->dirpath;
         if (is_dir($this->dirpath)) {
-            $it = new RecursiveDirectoryIterator($this->dirpath, RecursiveDirectoryIterator::SKIP_DOTS);
+            $it = new RecursiveDirectoryIterator($dirpath, RecursiveDirectoryIterator::SKIP_DOTS);
             $files = new RecursiveIteratorIterator($it, RecursiveIteratorIterator::CHILD_FIRST);
             foreach ($files as $file) {
                 $filename = $file->getFilename();

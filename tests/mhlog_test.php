@@ -25,7 +25,8 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once('/../block_mhaairs_util.php');
+global $CFG;
+require_once("$CFG->dirroot/blocks/mhaairs/block_mhaairs_util.php");
 
 /**
  * PHPUnit mhaairs log test case.
@@ -47,9 +48,20 @@ class block_mhaairs_log_testcase extends advanced_testcase {
     public function test_instance() {
         $this->resetAfterTest();
 
-        $logger = MHLog::instance(true);
+        // Logs disabled.
+        set_config('block_mhaairs_gradelog', 0);
+
+        $logger = MHLog::instance();
         $this->assertEquals(true, $logger instanceof MHLog);
-        $this->assertEquals(null, $logger->logenabled);
+        $this->assertEquals(false, $logger->logenabled);
+        $this->assertNotEquals(null, $logger->filepath);
+
+        // Logs enabled.
+        set_config('block_mhaairs_gradelog', 1);
+
+        $logger = MHLog::instance();
+        $this->assertEquals(true, $logger instanceof MHLog);
+        $this->assertEquals(true, $logger->logenabled);
         $this->assertNotEquals(null, $logger->filepath);
     }
 
@@ -61,15 +73,16 @@ class block_mhaairs_log_testcase extends advanced_testcase {
     public function test_logging() {
         $this->resetAfterTest();
 
-        // Enable logs.
+        // Logs enabled.
         set_config('block_mhaairs_gradelog', 1);
 
         // First logger.
-        $logger = MHLog::instance(true);
+        $logger = MHLog::instance();
         // Add to the log.
         $result = $logger->log('Hello world');
-        $this->assertEquals(13, $result);
-        // Count logs.
+        // Verify that putting the content in the log file did not fail.
+        $this->assertNotEquals(false, $result);
+        // Verify we have 1 log file.
         $result = count($logger->logs);
         $this->assertEquals(1, $result);
     }
@@ -86,21 +99,28 @@ class block_mhaairs_log_testcase extends advanced_testcase {
         set_config('block_mhaairs_gradelog', 1);
 
         // Add 3 loggers.
-        MHLog::instance(true)->log('Hello world');
-        MHLog::instance(true)->log('Hello universe');
-        MHLog::instance(true)->log('Big bang');
+        $log1 = MHLog::instance();
+        $log2 = MHLog::instance();
+        $log3 = MHLog::instance();
 
-        // Count logs.
+        // Add 3 loggers.
+        $log1->log('Hello world');
+        $log2->log('Hello universe');
+        $log3->log('Big bang');
+
+        // Verify we have 3 log files.
         $result = count(MHLog::instance()->logs);
         $this->assertEquals(3, $result);
 
-        // Delete current.
-        MHLog::instance()->delete();
+        // Delete one.
+        $log1->delete();
+        // Verify we have 2 log files.
         $result = count(MHLog::instance()->logs);
         $this->assertEquals(2, $result);
 
         // Delete all.
         MHLog::instance()->delete_all();
+        // Verify we have no log files.
         $result = count(MHLog::instance()->logs);
         $this->assertEquals(0, $result);
     }
