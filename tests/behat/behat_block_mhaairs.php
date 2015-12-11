@@ -30,6 +30,7 @@ require_once(__DIR__ . '/../../../../lib/behat/behat_base.php');
 use Behat\Behat\Context\Step\Given as Given;
 use Behat\Gherkin\Node\TableNode as TableNode;
 use Behat\Gherkin\Node\PyStringNode as PyStringNode;
+use Moodle\BehatExtension\Exception\SkippedException as SkippedException;
 
 /**
  * Mhaairs block steps definitions.
@@ -52,6 +53,11 @@ class behat_block_mhaairs extends behat_base {
         $customernumber = get_config(null, 'behat_mhaairs_customer_number');
         $sharedsecret = get_config(null, 'behat_mhaairs_shared_secret');
 
+        // Skip if customer number or shared secret are not set.
+        if (!$customernumber or !$sharedsecret) {
+            throw new SkippedException;
+        }
+
         $data = array(
             "| Customer Number | $customernumber |",
             "| Shared Secret   | $sharedsecret   |",
@@ -72,6 +78,11 @@ class behat_block_mhaairs extends behat_base {
 
         $customernumber = get_config(null, 'behat_mhaairs_customer_number');
         $sharedsecret = get_config(null, 'behat_mhaairs_shared_secret');
+
+        // Skip if customer number or shared secret are not set.
+        if (!$customernumber or !$sharedsecret) {
+            throw new SkippedException;
+        }
 
         $data = array(
             "| block_mhaairs_customer_number | $customernumber |",
