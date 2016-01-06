@@ -25,12 +25,6 @@
 
 defined('MOODLE_INTERNAL') || die();
 
-// Backwards compatibility.
-if (!class_exists('testing_block_generator')) {
-    abstract class testing_block_generator extends phpunit_block_generator {
-    }
-}
-
 /**
  * Mhaairs block data generator class
  *
@@ -47,7 +41,7 @@ class block_mhaairs_generator extends testing_block_generator {
      * @param array $options
      * @return stdClass activity record with extra cmid field
      */
-    public function create_instance($record = null, array $options = null) {
+    public function create_instance($record = null, $options = null) {
         global $DB;
 
         $this->instancecount++;
