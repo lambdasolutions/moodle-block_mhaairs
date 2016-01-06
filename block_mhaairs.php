@@ -42,6 +42,7 @@ class block_mhaairs extends block_base {
     protected $customernumber;
     protected $sharedsecret;
     protected $displayservices;
+    protected $displayhelplinks;
     private $servicedata;
 
     /**
@@ -90,6 +91,9 @@ class block_mhaairs extends block_base {
         if (!empty($CFG->block_mhaairs_display_services)) {
             $this->displayservices = $CFG->block_mhaairs_display_services;
         }
+
+        // Display help links.
+        $this->displayhelplinks = !empty($CFG->block_mhaairs_display_helplinks);
     }
 
     /**
@@ -226,7 +230,7 @@ class block_mhaairs extends block_base {
         }
         $blocklinks = '';
         $imagealt = get_string('imagealt');
-        $targetw = array('target' => '_blank');
+        $targetw = array('target' => '__mhaairs_service_window');
         $course = $this->page->course;
         foreach ($services as $aserv) {
             // Icon.
@@ -257,6 +261,11 @@ class block_mhaairs extends block_base {
      * @return array Array of HTML link fragments.
      */
     protected function get_help_links() {
+        // Must be configured site level.
+        if (!$this->displayhelplinks) {
+            return array();
+        }
+
         // Get the Help urls if enabled.
         $helpurls = block_mhaairs_connect::get_help_urls();
         if ($helpurls === false) {
@@ -264,10 +273,10 @@ class block_mhaairs extends block_base {
         }
         $helplinks = array();
         $context = $this->page->context;
-        $targetw = array('target' => '_blank');
         // Admin help link.
         $adminhelp = has_capability('block/mhaairs:viewadmindoc', $context);
         if ($adminhelp) {
+            $targetw = array('target' => '__mhaairs_adminhelp_window');
             $adminhelplink = html_writer::link(
                 $helpurls['AdminHelpUrl'],
                 get_string('adminhelplabel', __CLASS__),
@@ -278,6 +287,7 @@ class block_mhaairs extends block_base {
         // Teacher help link.
         $teacherhelp = has_capability('block/mhaairs:viewteacherdoc', $context);
         if ($teacherhelp) {
+            $targetw = array('target' => '__mhaairs_teacherhelp_window');
             $instrhelplink = html_writer::link(
                 $helpurls['InstructorHelpUrl'],
                 get_string('instrhelplabel', __CLASS__),
@@ -307,17 +317,17 @@ class block_mhaairs extends block_base {
             return $result;
         }
 
-        // Empty config means that block is not yet configured.
-        if (empty($this->config)) {
-            return $result;
-        }
+        // Initialize the display list with the services enabled in the site level.
+        $displaylist = explode(',', $this->displayservices);
 
-        // Compile the list of services to display
-        // as the intersection of site list and block list.
-        $displaylist = array();
-        foreach (explode(',', $this->displayservices) as $serviceid) {
-            if (!empty($this->config->$serviceid)) {
-                $displaylist[] = $serviceid;
+        // Limit to instructor selection in the instance, if any.
+        // If the instance has not been configured, all services
+        // enabled in the site level will be displayed.
+        if (!empty($this->config)) {
+            foreach ($displaylist as $key => $serviceid) {
+                if (empty($this->config->$serviceid)) {
+                    unset($displaylist[$key]);
+                }
             }
         }
 
