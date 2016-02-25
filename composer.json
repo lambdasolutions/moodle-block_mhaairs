@@ -1,0 +1,11 @@
+{
+    "name": "itamart/moodle-block_mhaairs",
+    "description": "The MH AAIRS block is a Moodle integration with McGraw Hill Campus.",
+    "type": "moodle-block",
+    "extra": {
+        "installer-name": "mhaairs"
+    },
+    "require": {
+        "composer/installers": "~1.0"
+    }
+}
